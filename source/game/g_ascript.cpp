@@ -3276,7 +3276,7 @@ static edict_t *asFunc_FireRocket( asvec3_t *origin, asvec3_t *angles, int speed
 
 static edict_t *asFunc_FireGrenade( asvec3_t *origin, asvec3_t *angles, int speed, int radius, int damage, int knockback, int stun, edict_t *owner )
 {
-	return W_Fire_Grenade( owner, origin->v, angles->v, speed, damage, min( 1, knockback ), knockback, stun, min( 1, damage ), radius, 5000, MOD_GRENADE_S, 0, false );
+	return W_Fire_Grenade( owner, origin->v, angles->v, speed, damage, min( 1, knockback ), knockback, stun, min( 1, damage ), radius, 5000, MOD_GRENADE_S, 0 );
 }
 
 static void asFunc_FireRiotgun( asvec3_t *origin, asvec3_t *angles, int range, int spread, int count, int damage, int knockback, int stun, edict_t *owner )

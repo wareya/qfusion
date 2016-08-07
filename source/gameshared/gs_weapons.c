@@ -111,9 +111,9 @@ trace_t *GS_TraceBullet( trace_t *trace, vec3_t start, vec3_t dir, float r, floa
 
 #define MAX_BEAM_HIT_ENTITIES 16
 
-void GS_TraceLaserBeam( trace_t *trace, vec3_t origin, vec3_t angles, float range, int ignore, int timeDelta, void ( *impact )( trace_t *tr, vec3_t dir ) )
+void GS_TraceLaserBeam( trace_t *trace, vec3_t origin, vec3_t dir, float range, int ignore, int timeDelta, void ( *impact )( trace_t *tr, vec3_t dir ) )
 {
-	vec3_t from, dir, end;
+	vec3_t from, end;
 	int mask = MASK_SHOT;
 	int passthrough = ignore;
 	entity_state_t *hit;
@@ -124,7 +124,6 @@ void GS_TraceLaserBeam( trace_t *trace, vec3_t origin, vec3_t angles, float rang
 
 	assert( trace );
 
-	AngleVectors( angles, dir, NULL, NULL );
 	VectorCopy( origin, from );
 	VectorMA( origin, range, dir, end );
 
@@ -200,7 +199,7 @@ void GS_TraceCurveLaserBeam( trace_t *trace, vec3_t origin, vec3_t angles, vec3_
 		AngleVectors( tmpangles, dir, NULL, NULL );
 		VectorMA( origin, range * frac, dir, end );
 
-		GS_TraceLaserBeam( trace, from, tmpangles, DistanceFast( from, end ), passthrough, timeDelta, impact );
+		GS_TraceLaserBeam( trace, from, dir, DistanceFast( from, end ), passthrough, timeDelta, impact );
 		if( trace->fraction != 1.0f )
 			break;
 

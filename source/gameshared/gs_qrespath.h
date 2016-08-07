@@ -266,7 +266,7 @@ extern "C" {
 #define S_GIBS_EXPLOSION	"sounds/misc/gibs_explosion"
 
 //wsw: pb disable unreferenced sounds
-//#define S_LAND					"sounds/misc/land"
+#define S_LAND					"sounds/misc/land"
 #define S_HIT_WATER		"sounds/misc/hit_water"
 
 #define S_PLAYER_RESPAWN "sounds/world/player_respawn"
