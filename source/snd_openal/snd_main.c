@@ -408,18 +408,27 @@ void SF_StartGlobalSound( sfx_t *sfx, int channel, float fvol ) {
 }
 
 /*
-* SF_StartLocalSound
+* SF_StartLocalSoundByName
 */
-void SF_StartLocalSound( const char *sound ) {
+void SF_StartLocalSoundByName( const char *sound ) {
 	sfx_t *sfx;
 
 	sfx = SF_RegisterSound( sound );
 	if( !sfx ) {
-		Com_Printf( "S_StartLocalSound: can't cache %s\n", sound );
+		Com_Printf( "S_StartLocalSoundByName: can't cache %s\n", sound );
 		return;
 	}
 
-	S_IssueStartLocalSoundCmd( s_cmdPipe, sfx->id );
+	S_IssueStartLocalSoundCmd( s_cmdPipe, sfx->id, 1.0f );
+}
+
+/*
+* SF_StartLocalSound
+*/
+void SF_StartLocalSound( sfx_t *sfx, float fvol ) {
+	if( sfx != NULL ) {
+		S_IssueStartLocalSoundCmd( s_cmdPipe, sfx->id, fvol );
+	}
 }
 
 /*

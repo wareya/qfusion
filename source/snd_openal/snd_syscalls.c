@@ -54,6 +54,7 @@ QF_DLL_EXPORT sound_export_t *GetSoundAPI( sound_import_t *import ) {
 	globals.StartFixedSound = SF_StartFixedSound;
 	globals.StartRelativeSound = SF_StartRelativeSound;
 	globals.StartGlobalSound = SF_StartGlobalSound;
+	globals.StartLocalSoundByName = SF_StartLocalSoundByName;
 	globals.StartLocalSound = SF_StartLocalSound;
 	globals.AddLoopSound = SF_AddLoopSound;
 
