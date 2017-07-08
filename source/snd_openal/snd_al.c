@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "snd_local.h"
 #include "snd_cmdque.h"
+#include "snd_env_sampler.h"
 
 ALCdevice *alDevice = NULL;
 ALCcontext *alContext = NULL;
@@ -125,6 +126,21 @@ const char *S_ErrorMessage( ALenum error ) {
 	}
 }
 
+#define DECLARE_REVERB_PARAM( param, member, minValue, maxValue, defaultValue ) \
+	{ #param, param, offsetof( reverbProps_t, member ), minValue, maxValue, defaultValue }
+
+const reverbParamDef_t reverbParamsDefs[NUM_REVERB_PARAMS] = {
+	DECLARE_REVERB_PARAM( AL_REVERB_DENSITY, density, 0.0f, 1.0f, 1.0f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_DIFFUSION, diffusion, 0.0f, 1.0f, 1.0f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_GAIN, gain, 0.0f, 1.0f, 0.32f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_GAINHF, gainHf, 0.0f, 1.0f, 0.89f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_DECAY_TIME, decayTime, 0.1f, 20.0f, 1.49f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_REFLECTIONS_GAIN, reflectionsGain, 0.0f, 3.16f, 0.05f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_REFLECTIONS_DELAY, reflectionsDelay, 0.0f, 0.3f, 0.007f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_LATE_REVERB_GAIN, lateReverbGain, 0.0f, 10.0f, 1.26f ),
+	DECLARE_REVERB_PARAM( AL_REVERB_LATE_REVERB_DELAY, lateReverbDelay, 0.0f, 0.1f, 0.011f )
+};
+
 /*
 * S_Init
 */
@@ -133,6 +149,8 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 	int userDeviceNum = -1;
 	char *devices, *defaultDevice;
 	cvar_t *s_openAL_device;
+	int attrList[4];
+	int *attrPtr;
 
 	alDevice = NULL;
 	alContext = NULL;
@@ -189,8 +207,20 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 		return false;
 	}
 
+	attrPtr = &attrList[0];
+	if( QAL_Is_EFX_ExtensionSupported() && s_environment_effects->integer ) {
+		// We limit each source to a single "auxiliary send" for optimization purposes.
+		// This means each source has a single auxiliary output that feeds an effect aside from a direct output.
+		*attrPtr++ = ALC_MAX_AUXILIARY_SENDS;
+		*attrPtr++ = 1;
+	}
+
+	// Terminate the attributes pairs list
+	*attrPtr++ = 0;
+	*attrPtr++ = 0;
+
 	// Create context
-	alContext = qalcCreateContext( alDevice, NULL );
+	alContext = qalcCreateContext( alDevice, attrList );
 	if( !alContext ) {
 		Com_Printf( "Failed to create context\n" );
 		return false;
@@ -217,11 +247,12 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 			Com_Printf( "\n" );
 		}
 
-		Com_Printf( "  Device:     %s\n", qalcGetString( alDevice, ALC_DEVICE_SPECIFIER ) );
-		Com_Printf( "  Vendor:     %s\n", qalGetString( AL_VENDOR ) );
-		Com_Printf( "  Version:    %s\n", qalGetString( AL_VERSION ) );
-		Com_Printf( "  Renderer:   %s\n", qalGetString( AL_RENDERER ) );
-		Com_Printf( "  Extensions: %s\n", qalGetString( AL_EXTENSIONS ) );
+		Com_Printf( "  Device:      %s\n", qalcGetString( alDevice, ALC_DEVICE_SPECIFIER ) );
+		Com_Printf( "  Vendor:      %s\n", qalGetString( AL_VENDOR ) );
+		Com_Printf( "  Version:     %s\n", qalGetString( AL_VERSION ) );
+		Com_Printf( "  Renderer:    %s\n", qalGetString( AL_RENDERER ) );
+		Com_Printf( "  EFX support: %s\n", QAL_Is_EFX_ExtensionSupported() ? "yes" : "no" );
+		Com_Printf( "  Extensions:  %s\n", qalGetString( AL_EXTENSIONS ) );
 	}
 
 	// Check for Linux shutdown race condition
@@ -230,11 +261,8 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 	}
 
 	qalDopplerFactor( s_doppler->value );
-	qalDopplerVelocity( s_sound_velocity->value > 0.0f ? s_sound_velocity->value : 0.0f );
-	if( qalSpeedOfSound ) { // opelAL 1.1 only. alDopplerVelocity being deprecated
-		qalSpeedOfSound( s_sound_velocity->value > 0.0f ? s_sound_velocity->value : 0.0f );
-	}
-
+	// Defer s_sound_velocity application to S_Update() in order to avoid code duplication
+	s_sound_velocity->modified = true;
 	s_doppler->modified = false;
 
 	S_SetAttenuationModel( S_DEFAULT_ATTENUATION_MODEL, S_DEFAULT_ATTENUATION_MAXDISTANCE, S_DEFAULT_ATTENUATION_REFDISTANCE );
@@ -248,6 +276,15 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 	if( !S_InitSources( maxEntities, verbose ) ) {
 		Com_Printf( "Failed to init sources\n" );
 		return false;
+	}
+
+	// If we have reached this condition, EFX support is guaranteed.
+	if( s_environment_effects->integer ) {
+		// Set the value once
+		qalListenerf( AL_METERS_PER_UNIT, QF_METERS_PER_UNIT );
+		if( qalGetError() != AL_NO_ERROR ) {
+			return false;
+		}
 	}
 
 	return true;
@@ -326,6 +363,8 @@ static void S_SetListener( const vec3_t origin, const vec3_t velocity, const mat
 	qalListenerfv( AL_POSITION, origin );
 	qalListenerfv( AL_VELOCITY, velocity );
 	qalListenerfv( AL_ORIENTATION, orientation );
+
+	ENV_UpdateListener( origin, velocity );
 }
 
 /*
@@ -349,9 +388,18 @@ static void S_Update( void ) {
 	}
 
 	if( s_sound_velocity->modified ) {
-		qalDopplerVelocity( s_sound_velocity->value > 0.0f ? s_sound_velocity->value : 0.0f );
+		// If environment effects are supported, we can set units to meters ratio.
+		// In this case, we have to scale the hardcoded s_sound_velocity value.
+		// (The engine used to assume that units to meters ratio is 1).
+		float appliedVelocity = s_sound_velocity->value;
+		if( appliedVelocity <= 0.0f ) {
+			appliedVelocity = 0.0f;
+		} else if( s_environment_effects->integer ) {
+			appliedVelocity *= QF_METERS_PER_UNIT;
+		}
+		qalDopplerVelocity( appliedVelocity );
 		if( qalSpeedOfSound ) {
-			qalSpeedOfSound( s_sound_velocity->value > 0.0f ? s_sound_velocity->value : 0.0f );
+			qalSpeedOfSound( appliedVelocity );
 		}
 		s_sound_velocity->modified = false;
 	}
@@ -691,7 +739,7 @@ static pipeCmdHandler_t sndCmdHandlers[SND_CMD_NUM_CMDS] =
 	/* SND_CMD_STUFFCMD */
 	(pipeCmdHandler_t)S_HandleStuffCmd,
 	/* SND_CMD_SET_MUL_ENTITY_SPATIALIZATION */
-	(pipeCmdHandler_t)S_HandleSetMulEntitySpatializationCmd,
+	(pipeCmdHandler_t)S_HandleSetMulEntitySpatializationCmd
 };
 
 /*

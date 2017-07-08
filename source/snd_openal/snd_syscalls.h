@@ -173,16 +173,24 @@ static inline void trap_MemEmptyPool( struct mempool_s *pool, const char *filena
 	SOUND_IMPORT.Mem_EmptyPool( pool, filename, fileline );
 }
 
-static inline void trap_GetEntitySpatilization( int entnum, vec3_t origin, vec3_t velocity ) {
-	SOUND_IMPORT.GetEntitySpatilization( entnum, origin, velocity );
-}
-
 static inline void *trap_LoadLibrary( char *name, dllfunc_t *funcs ) {
 	return SOUND_IMPORT.Sys_LoadLibrary( name, funcs );
 }
 
 static inline void trap_UnloadLibrary( void **lib ) {
 	SOUND_IMPORT.Sys_UnloadLibrary( lib );
+}
+
+static inline void trap_Trace( struct trace_s *tr, vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs, int mask ) {
+	SOUND_IMPORT.Trace( tr, start, end, mins, maxs, mask );
+}
+
+static inline int trap_PointContents( vec3_t p ) {
+	return SOUND_IMPORT.PointContents( p );
+}
+
+static inline bool trap_InPVS( vec3_t p1, vec3_t p2 ) {
+	return SOUND_IMPORT.InPVS( p1, p2 );
 }
 
 static inline struct qthread_s *trap_Thread_Create( void *( *routine )( void* ), void *param ) {

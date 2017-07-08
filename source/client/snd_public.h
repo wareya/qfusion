@@ -20,11 +20,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // snd_public.h -- sound dll information visible to engine
 
-#define SOUND_API_VERSION   39
+#define SOUND_API_VERSION   40
 
 #define ATTN_NONE 0
 
 //===============================================================
+
+struct trace_s;
 
 //
 // functions provided by the main engine
@@ -90,7 +92,10 @@ typedef struct {
 	void ( *Mem_FreePool )( struct mempool_s **pool, const char *filename, int fileline );
 	void ( *Mem_EmptyPool )( struct mempool_s *pool, const char *filename, int fileline );
 
-	void ( *GetEntitySpatilization )( int entnum, vec3_t origin, vec3_t velocity );
+	// environment sampling
+	void ( *Trace )( struct trace_s *tr, vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs, int mask );
+	int ( *PointContents )( vec3_t p );
+	bool ( *InPVS )( vec3_t p1, vec3_t p2 );
 
 	// multithreading
 	struct qthread_s *( *Thread_Create )( void *( *routine )( void* ), void *param );
@@ -116,6 +121,11 @@ typedef struct {
 typedef struct {
 	// if API is different, the dll cannot be used
 	int ( *API )( void );
+	// The API expects thread safety from the imported calls
+	// (if they are used not in the main client thread).
+	// This call helps to avoid creation of separate CM state instance
+	// for the sound module if it is not really needed.
+	bool ( *ExpectsThreadSafeCMImports )( void );
 
 	// the init function will be called at each restart
 	bool ( *Init )( void *hwnd, int maxEntities, bool verbose );

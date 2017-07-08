@@ -232,7 +232,180 @@ extern LPALCCAPTURESAMPLES qalcCaptureSamples;
 #define qalcCaptureSamples alcCaptureSamples
 #endif
 
+// QFusion: always load EFX extension functions manually
+
+typedef void ( AL_APIENTRY * LPALGENEFFECTS )( ALsizei, ALuint* );
+typedef void ( AL_APIENTRY * LPALDELETEEFFECTS )( ALsizei, const ALuint* );
+typedef ALboolean ( AL_APIENTRY * LPALISEFFECT )( ALuint );
+typedef void ( AL_APIENTRY * LPALEFFECTI )( ALuint, ALenum, ALint );
+typedef void ( AL_APIENTRY * LPALEFFECTIV )( ALuint, ALenum, const ALint* );
+typedef void ( AL_APIENTRY * LPALEFFECTF )( ALuint, ALenum, ALfloat );
+typedef void ( AL_APIENTRY * LPALEFFECTFV )( ALuint, ALenum, const ALfloat* );
+typedef void ( AL_APIENTRY * LPALGETEFFECTI )( ALuint, ALenum, ALint* );
+typedef void ( AL_APIENTRY * LPALGETEFFECTIV )( ALuint, ALenum, ALint* );
+typedef void ( AL_APIENTRY * LPALGETEFFECTF )( ALuint, ALenum, ALfloat* );
+typedef void ( AL_APIENTRY * LPALGETEFFECTFV )( ALuint, ALenum, ALfloat* );
+
+typedef void ( AL_APIENTRY * LPALGENFILTERS )( ALsizei, ALuint* );
+typedef void ( AL_APIENTRY * LPALDELETEFILTERS )( ALsizei, const ALuint* );
+typedef ALboolean ( AL_APIENTRY * LPALISFILTER )( ALuint );
+typedef void ( AL_APIENTRY * LPALFILTERI )( ALuint, ALenum, ALint );
+typedef void ( AL_APIENTRY * LPALFILTERIV )( ALuint, ALenum, const ALint* );
+typedef void ( AL_APIENTRY * LPALFILTERF )( ALuint, ALenum, ALfloat );
+typedef void ( AL_APIENTRY * LPALFILTERFV )( ALuint, ALenum, const ALfloat* );
+typedef void ( AL_APIENTRY * LPALGETFILTERI )( ALuint, ALenum, ALint* );
+typedef void ( AL_APIENTRY * LPALGETFILTERIV )( ALuint, ALenum, ALint* );
+typedef void ( AL_APIENTRY * LPALGETFILTERF )( ALuint, ALenum, ALfloat* );
+typedef void ( AL_APIENTRY * LPALGETFILTERFV )( ALuint, ALenum, ALfloat* );
+
+typedef void ( AL_APIENTRY * LPALGENAUXILIARYEFFECTSLOTS )( ALsizei, ALuint* );
+typedef void ( AL_APIENTRY * LPALDELETEAUXILIARYEFFECTSLOTS )( ALsizei, const ALuint* );
+typedef ALboolean ( AL_APIENTRY * LPALISAUXILIARYEFFECTSLOT )( ALuint );
+typedef void ( AL_APIENTRY * LPALAUXILIARYEFFECTSLOTI )( ALuint, ALenum, ALint );
+typedef void ( AL_APIENTRY * LPALAUXILIARYEFFECTSLOTIV )( ALuint, ALenum, const ALint* );
+typedef void ( AL_APIENTRY * LPALAUXILIARYEFFECTSLOTF )( ALuint, ALenum, ALfloat );
+typedef void ( AL_APIENTRY * LPALAUXILIARYEFFECTSLOTFV )( ALuint, ALenum, const ALfloat* );
+typedef void ( AL_APIENTRY * LPALGETAUXILIARYEFFECTSLOTI )( ALuint, ALenum, ALint* );
+typedef void ( AL_APIENTRY * LPALGETAUXILIARYEFFECTSLOTIV )( ALuint, ALenum, ALint* );
+typedef void ( AL_APIENTRY * LPALGETAUXILIARYEFFECTSLOTF )( ALuint, ALenum, ALfloat* );
+typedef void ( AL_APIENTRY * LPALGETAUXILIARYEFFECTSLOTFV )( ALuint, ALenum, ALfloat* );
+
+extern LPALGENEFFECTS qalGenEffects;
+extern LPALDELETEEFFECTS qalDeleteEffects;
+extern LPALISEFFECT qalIsEffect;
+extern LPALEFFECTI qalEffecti;
+extern LPALEFFECTIV qalEffectiv;
+extern LPALEFFECTF qalEffectf;
+extern LPALEFFECTFV qalEffectfv;
+extern LPALGETEFFECTI qalGetEffecti;
+extern LPALGETEFFECTIV qalGetEffeciv;
+extern LPALGETEFFECTF qalGetEffectf;
+extern LPALGETEFFECTFV qalGetEffectfv;
+
+extern LPALGENFILTERS qalGenFilters;
+extern LPALDELETEFILTERS qalDeleteFilters;
+extern LPALISFILTER qalIsFilter;
+extern LPALFILTERI qalFilteri;
+extern LPALFILTERIV qalFilteriv;
+extern LPALFILTERF qalFilterf;
+extern LPALFILTERFV qalFilterfv;
+extern LPALGETFILTERI qalGetFilteri;
+extern LPALGETFILTERIV qalGetFilteriv;
+extern LPALGETFILTERF qalGetFilterf;
+extern LPALGETFILTERFV qalGetFilterfv;
+
+extern LPALGENAUXILIARYEFFECTSLOTS qalGenAuxiliaryEffectSlots;
+extern LPALDELETEAUXILIARYEFFECTSLOTS qalDeleteAuxiliaryEffectSlots;
+extern LPALISAUXILIARYEFFECTSLOT qalIsAuxiliaryEffectSlot;
+extern LPALAUXILIARYEFFECTSLOTI qalAuxiliaryEffectSloti;
+extern LPALAUXILIARYEFFECTSLOTIV qalAuxiliaryEffectSlotiv;
+extern LPALAUXILIARYEFFECTSLOTF qalAuxiliaryEffectSlotf;
+extern LPALAUXILIARYEFFECTSLOTFV qalAuxiliaryEffectSlotfv;
+extern LPALGETAUXILIARYEFFECTSLOTI qalGetAuxiliaryEffectSloti;
+extern LPALGETAUXILIARYEFFECTSLOTIV qalGetAuxiliaryEffectSlotiv;
+extern LPALGETAUXILIARYEFFECTSLOTF qalGetAuxiliaryEffectSlotf;
+extern LPALGETAUXILIARYEFFECTSLOTFV qalGetAuxiliaryEffectSlotfv;
+
+#define ALC_MAX_AUXILIARY_SENDS                  0x20003
+
+/* Listener properties. */
+#define AL_METERS_PER_UNIT                       0x20004
+
+/* Effect properties. */
+
+/* Reverb effect parameters */
+#define AL_REVERB_DENSITY                        0x0001
+#define AL_REVERB_DIFFUSION                      0x0002
+#define AL_REVERB_GAIN                           0x0003
+#define AL_REVERB_GAINHF                         0x0004
+#define AL_REVERB_DECAY_TIME                     0x0005
+#define AL_REVERB_DECAY_HFRATIO                  0x0006
+#define AL_REVERB_REFLECTIONS_GAIN               0x0007
+#define AL_REVERB_REFLECTIONS_DELAY              0x0008
+#define AL_REVERB_LATE_REVERB_GAIN               0x0009
+#define AL_REVERB_LATE_REVERB_DELAY              0x000A
+#define AL_REVERB_AIR_ABSORPTION_GAINHF          0x000B
+#define AL_REVERB_ROOM_ROLLOFF_FACTOR            0x000C
+#define AL_REVERB_DECAY_HFLIMIT                  0x000D
+
+/* Flanger effect parameters */
+#define AL_FLANGER_WAVEFORM                      0x0001
+#define AL_FLANGER_PHASE                         0x0002
+#define AL_FLANGER_RATE                          0x0003
+#define AL_FLANGER_DEPTH                         0x0004
+#define AL_FLANGER_FEEDBACK                      0x0005
+#define AL_FLANGER_DELAY                         0x0006
+
+/* Effect type */
+#define AL_EFFECT_FIRST_PARAMETER                0x0000
+#define AL_EFFECT_LAST_PARAMETER                 0x8000
+#define AL_EFFECT_TYPE                           0x8001
+
+/* Effect types, used with the AL_EFFECT_TYPE property */
+#define AL_EFFECT_NULL                           0x0000
+#define AL_EFFECT_REVERB                         0x0001
+#define AL_EFFECT_CHORUS                         0x0002
+#define AL_EFFECT_DISTORTION                     0x0003
+#define AL_EFFECT_ECHO                           0x0004
+#define AL_EFFECT_FLANGER                        0x0005
+#define AL_EFFECT_FREQUENCY_SHIFTER              0x0006
+#define AL_EFFECT_VOCAL_MORPHER                  0x0007
+#define AL_EFFECT_PITCH_SHIFTER                  0x0008
+#define AL_EFFECT_RING_MODULATOR                 0x0009
+#define AL_EFFECT_AUTOWAH                        0x000A
+#define AL_EFFECT_COMPRESSOR                     0x000B
+#define AL_EFFECT_EQUALIZER                      0x000C
+#define AL_EFFECT_EAXREVERB                      0x8000
+
+/* Auxiliary Effect Slot properties. */
+#define AL_EFFECTSLOT_EFFECT                     0x0001
+#define AL_EFFECTSLOT_GAIN                       0x0002
+#define AL_EFFECTSLOT_AUXILIARY_SEND_AUTO        0x0003
+
+/* NULL Auxiliary Slot ID to disable a source send. */
+#define AL_EFFECTSLOT_NULL                       0x0000
+
+/* Source properties. */
+#define AL_DIRECT_FILTER                         0x20005
+#define AL_AUXILIARY_SEND_FILTER                 0x20006
+#define AL_AIR_ABSORPTION_FACTOR                 0x20007
+#define AL_ROOM_ROLLOFF_FACTOR                   0x20008
+#define AL_CONE_OUTER_GAINHF                     0x20009
+#define AL_DIRECT_FILTER_GAINHF_AUTO             0x2000A
+#define AL_AUXILIARY_SEND_FILTER_GAIN_AUTO       0x2000B
+#define AL_AUXILIARY_SEND_FILTER_GAINHF_AUTO     0x2000C
+
+/* Filter properties. */
+
+/* Lowpass filter parameters */
+#define AL_LOWPASS_GAIN                          0x0001
+#define AL_LOWPASS_GAINHF                        0x0002
+
+/* Highpass filter parameters */
+#define AL_HIGHPASS_GAIN                         0x0001
+#define AL_HIGHPASS_GAINLF                       0x0002
+
+/* Bandpass filter parameters */
+#define AL_BANDPASS_GAIN                         0x0001
+#define AL_BANDPASS_GAINLF                       0x0002
+#define AL_BANDPASS_GAINHF                       0x0003
+
+/* Filter type */
+#define AL_FILTER_FIRST_PARAMETER                0x0000
+#define AL_FILTER_LAST_PARAMETER                 0x8000
+#define AL_FILTER_TYPE                           0x8001
+
+/* Filter types, used with the AL_FILTER_TYPE property */
+#define AL_FILTER_NULL                           0x0000
+#define AL_FILTER_LOWPASS                        0x0001
+#define AL_FILTER_HIGHPASS                       0x0002
+#define AL_FILTER_BANDPASS                       0x0003
+
 bool QAL_Init( const char *libname, bool verbose );
 void QAL_Shutdown( void );
+
+// Check whether the extension is de-facto supported on loading.
+// qalIsExtensionSupported()/qalcIsExtensionSupported() lie sometimes.
+bool QAL_Is_EFX_ExtensionSupported();
 
 #endif  // __QAL_H__

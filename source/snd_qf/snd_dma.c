@@ -1625,7 +1625,7 @@ static pipeCmdHandler_t sndCmdHandlers[SND_CMD_NUM_CMDS] =
 	/* SND_CMD_STUFFCMD */
 	(pipeCmdHandler_t)S_HandleStuffCmd,
 	/* SND_CMD_SET_MUL_ENTITY_SPATIALIZATION */
-	(pipeCmdHandler_t)S_HandleSetMulEntitySpatializationCmd,
+	(pipeCmdHandler_t)S_HandleSetMulEntitySpatializationCmd
 };
 
 /*

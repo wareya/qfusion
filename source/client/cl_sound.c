@@ -175,6 +175,32 @@ static bool CL_SoundModule_Load( const char *name, sound_import_t *import, bool 
 	return true;
 }
 
+static void CL_SoundModule_Trace( trace_t *tr, vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs, int mask ) {
+	if( cl.sound_cms ) {
+		CM_TransformedBoxTrace( cl.sound_cms, tr, start, end, mins, maxs, NULL, mask, NULL, NULL );
+		return;
+	}
+
+	tr->fraction = 1.0f;
+	tr->startsolid = false;
+	tr->allsolid = false;
+}
+
+static int CL_SoundModule_PointContents( vec3_t p ) {
+	if( cl.sound_cms ) {
+		return CM_TransformedPointContents( cl.sound_cms, p, NULL, NULL, NULL );
+	}
+	return 0;
+}
+
+static bool CL_SoundModule_InPVS( vec3_t p1, vec3_t p2 ) {
+	if( cl.sound_cms ) {
+		return CM_InPVS( cl.sound_cms, p1, p2 );
+	}
+	// Be consistent with the Trace() call.
+	return true;
+}
+
 /*
 * CL_SoundModule_Init
 */
@@ -265,7 +291,9 @@ void CL_SoundModule_Init( bool verbose ) {
 	import.Mem_FreePool = CL_SoundModule_MemFreePool;
 	import.Mem_EmptyPool = CL_SoundModule_MemEmptyPool;
 
-	import.GetEntitySpatilization = CL_GameModule_GetEntitySpatilization;
+	import.Trace = CL_SoundModule_Trace;
+	import.PointContents = CL_SoundModule_PointContents;
+	import.InPVS = CL_SoundModule_InPVS;
 
 	import.Thread_Create = QThread_Create;
 	import.Thread_Join = QThread_Join;
@@ -324,6 +352,11 @@ void CL_SoundModule_Shutdown( bool verbose ) {
 		se = NULL;
 	}
 
+	if( cl.sound_cms && cl.sound_cms != cl.cms ) {
+		CM_ReleaseReference( cl.sound_cms );
+	}
+	cl.sound_cms = NULL;
+
 	Com_UnloadLibrary( &sound_library );
 	Mem_FreePool( &cl_soundmodulepool );
 }
@@ -335,6 +368,8 @@ void CL_SoundModule_BeginRegistration( void ) {
 	if( se ) {
 		se->BeginRegistration();
 	}
+
+	cl.sound_cms = NULL;
 }
 
 /*
@@ -343,6 +378,16 @@ void CL_SoundModule_BeginRegistration( void ) {
 void CL_SoundModule_EndRegistration( void ) {
 	if( se ) {
 		se->EndRegistration();
+
+		// CM setup has to be done here due to initialization order issues after restarts
+		assert( !cl.sound_cms );
+		if( cl.cms ) {
+			if( se->ExpectsThreadSafeCMImports() ) {
+				cl.sound_cms = CM_Clone( cl.cms );
+			} else {
+				cl.sound_cms = cl.cms;
+			}
+		}
 	}
 }
 

@@ -33,6 +33,7 @@ QF_DLL_EXPORT sound_export_t *GetSoundAPI( sound_import_t *import ) {
 	SOUND_IMPORT = *import;
 
 	globals.API = S_API;
+	globals.ExpectsThreadSafeCMImports = S_ExpectsThreadSafeCMImports;
 
 	globals.Init = SF_Init;
 	globals.Shutdown = SF_Shutdown;

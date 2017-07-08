@@ -22,14 +22,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "snd_local.h"
+#include <snd_cmdque.h>
+#include "snd_env_sampler.h"
 
-#ifdef __MACOSX__
-#define MAX_SRC 64
-#else
-#define MAX_SRC 128
-#endif
-static src_t srclist[MAX_SRC];
-static int src_count = 0;
+src_t srclist[MAX_SRC];
+int src_count = 0;
 static bool src_inited = false;
 
 typedef struct sentity_s {
@@ -44,8 +41,7 @@ static int max_ents;
 /*
 * source_setup
 */
-static void source_setup( src_t *src, sfx_t *sfx, int priority, int entNum,
-						  int channel, float fvol, float attenuation ) {
+static void source_setup( src_t *src, sfx_t *sfx, int priority, int entNum, int channel, float fvol, float attenuation ) {
 	ALuint buffer = 0;
 
 	// Mark the SFX as used, and grab the raw AL buffer
@@ -81,6 +77,8 @@ static void source_setup( src_t *src, sfx_t *sfx, int priority, int entNum,
 	qalSourcef( src->source, AL_REFERENCE_DISTANCE, s_attenuation_refdistance );
 	qalSourcef( src->source, AL_MAX_DISTANCE, s_attenuation_maxdistance );
 	qalSourcef( src->source, AL_ROLLOFF_FACTOR, attenuation );
+
+	ENV_RegisterSource( src );
 }
 
 /*
@@ -123,6 +121,72 @@ static void source_kill( src_t *src ) {
 	src->isLocked = false;
 	src->isLooping = false;
 	src->isTracking = false;
+
+	ENV_UnregisterSource( src );
+}
+
+void S_UpdateEFX( src_t *src ) {
+	const envProps_t *envProps;
+	ALint effectType;
+
+	envProps = &src->envUpdateState.envProps;
+	if( !envProps->useEfx ) {
+		if ( s_environment_effects->integer ) {
+			// Detach the slot from the source
+			qalSource3i(src->source, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, AL_FILTER_NULL);
+			// Detach the effect from the slot
+			qalAuxiliaryEffectSloti( src->effectSlot, AL_EFFECTSLOT_EFFECT, AL_EFFECT_NULL );
+			// Detach the direct filter
+			qalSourcei( src->source, AL_DIRECT_FILTER, AL_FILTER_NULL );
+		}
+		return;
+	}
+
+	// We limit each source to have only a single effect.
+	// This is required to comply with the runtime effects count restriction.
+	// If the effect type has been changed, we have to delete an existing effect.
+	qalGetEffecti( src->effect, AL_EFFECT_TYPE, &effectType );
+	if( ( effectType == AL_EFFECT_FLANGER ) ^ envProps->useFlanger ) {
+		// Detach the slot from the source
+		qalSource3i( src->source, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, AL_FILTER_NULL );
+		// Detach the effect from the slot
+		qalAuxiliaryEffectSloti( src->effectSlot, AL_EFFECTSLOT_EFFECT, AL_EFFECT_NULL );
+
+		// TODO: Can we reuse the effect?
+		qalDeleteEffects( 1, &src->effect );
+		qalGenEffects( 1, &src->effect );
+
+		if( envProps->useFlanger ) {
+			qalEffecti( src->effect, AL_EFFECT_TYPE, AL_EFFECT_FLANGER );
+			// This is the only place where the flanger gets tweaked
+			qalEffectf( src->effect, AL_FLANGER_DEPTH, 0.5f );
+			qalEffectf( src->effect, AL_FLANGER_FEEDBACK, -0.4f );
+		} else {
+			qalEffecti( src->effect, AL_EFFECT_TYPE, AL_EFFECT_REVERB );
+		}
+	}
+
+	assert( envProps->directObstruction >= 0.0f && envProps->directObstruction <= 1.0f );
+	qalFilterf( src->directFilter, AL_LOWPASS_GAINHF, 1.0f - envProps->directObstruction );
+
+	if( !envProps->useFlanger ) {
+		const uint8_t *basePtr = ( const uint8_t * )&envProps->reverbProps;
+		for ( int i = 0; i < NUM_REVERB_PARAMS; ++i ) {
+			float value;
+			// Make sure we have set the proper params defs array size, check the member for being a zero
+			assert( reverbParamsDefs[i].name );
+			value = *( float * )( basePtr + reverbParamsDefs[i].propsMemberOffset );
+			//assert( reverbParamsDefs[i].minValue <= value && reverbParamsDefs[i].maxValue >= value );
+			qalEffectf( src->effect, reverbParamsDefs[i].param, value );
+		}
+	}
+
+	// TODO: Check whether it is valid... looks like we have to reattach everything to make updates get applied
+
+	// Attach the effect to the slot
+	qalAuxiliaryEffectSloti( src->effectSlot, AL_EFFECTSLOT_EFFECT, src->effect );
+	// Feed the slot from the source
+	qalSource3i( src->source, AL_AUXILIARY_SEND_FILTER, src->effectSlot, 0, AL_FILTER_NULL );
 }
 
 /*
@@ -205,23 +269,153 @@ static void source_loop( int priority, sfx_t *sfx, int entNum, float fvol, float
 	entlist[entNum].touched = true;
 }
 
+static void S_ShutdownSourceEFX( src_t *src ) {
+	if( src->directFilter ) {
+		// Detach the filter from the source
+		qalSourcei( src->source, AL_DIRECT_FILTER, AL_FILTER_NULL );
+		qalDeleteFilters( 1, &src->directFilter );
+		src->directFilter = 0;
+	}
+
+	if( src->effect && src->effectSlot ) {
+		// Detach the effect from the source
+		qalSource3i( src->source, AL_AUXILIARY_SEND_FILTER, AL_EFFECTSLOT_NULL, 0, 0 );
+		// Detach the effect from the slot
+		qalAuxiliaryEffectSloti( src->effectSlot, AL_EFFECTSLOT_EFFECT, AL_EFFECT_NULL );
+	}
+
+	if( src->effect ) {
+		qalDeleteEffects( 1, &src->effect );
+		src->effect = 0;
+	}
+
+	if( src->effectSlot ) {
+		qalDeleteAuxiliaryEffectSlots( 1, &src->effectSlot );
+		src->effectSlot = 0;
+	}
+
+	// Suppress errors if any
+	qalGetError();
+}
+
+static bool S_InitSourceEFX( src_t *src ) {
+	src->directFilter = 0;
+	src->effect = 0;
+	src->effectSlot = 0;
+
+	qalGenFilters( 1, &src->directFilter );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	qalFilteri( src->directFilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	// Set default filter values (no actual attenuation)
+	qalFilterf( src->directFilter, AL_LOWPASS_GAIN, 1.0f );
+	qalFilterf( src->directFilter, AL_LOWPASS_GAINHF, 1.0f );
+
+	// Attach the filter to the source
+	qalSourcei( src->source, AL_DIRECT_FILTER, src->directFilter );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	qalGenEffects( 1, &src->effect );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	qalEffecti( src->effect, AL_EFFECT_TYPE, AL_EFFECT_REVERB );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	// Actually disable the reverb effect
+	qalEffectf( src->effect, AL_REVERB_GAIN, 0.0f );
+	if ( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	qalGenAuxiliaryEffectSlots( 1, &src->effectSlot );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	// Attach the effect to the slot
+	qalAuxiliaryEffectSloti( src->effectSlot, AL_EFFECTSLOT_EFFECT, src->effect );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	// Feed the slot from the source
+	qalSource3i( src->source, AL_AUXILIARY_SEND_FILTER, src->effectSlot, 0, AL_FILTER_NULL );
+	if( qalGetError() != AL_NO_ERROR ) {
+		goto cleanup;
+	}
+
+	return true;
+
+cleanup:
+	S_ShutdownSourceEFX( src );
+	return false;
+}
+
 /*
 * S_InitSources
 */
 bool S_InitSources( int maxEntities, bool verbose ) {
-	int i;
+	int i, j, maxSrc = MAX_SRC;
+	bool useEfx = s_environment_effects->integer != 0;
+
+	// Although we handle the failure of too many sources/effects allocation,
+	// the AL library still prints an error message to stdout and it might be confusing.
+	// Limit the number of sources (and attached effects) to this value a-priori.
+	// This code also relies on recent versions on the library.
+	// There still is a failure if a user tries to load a dated library.
+	if ( useEfx && !strcmp( qalGetString( AL_VENDOR ), "OpenAL Community" ) ) {
+		maxSrc = 64;
+	}
 
 	memset( srclist, 0, sizeof( srclist ) );
 	src_count = 0;
 
 	// Allocate as many sources as possible
-	for( i = 0; i < MAX_SRC; i++ ) {
+	for( i = 0; i < maxSrc; i++ ) {
 		qalGenSources( 1, &srclist[i].source );
 		if( qalGetError() != AL_NO_ERROR ) {
 			break;
 		}
+
+		if( useEfx ) {
+			if( !S_InitSourceEFX( &srclist[i] ) ) {
+				if( src_count >= 16 ) {
+					// We have created a minimally acceptable sources/effects set.
+					// Just delete an orphan source without corresponding effects and stop sources creation.
+					qalDeleteSources( 1, &srclist[i].source );
+					break;
+				}
+
+				Com_Printf( S_COLOR_YELLOW "Warning: Cannot create enough sound effects.\n" );
+				Com_Printf( S_COLOR_YELLOW "Environment sound effects will be unavailable.\n" );
+				Com_Printf( S_COLOR_YELLOW "Make sure you are using the recent OpenAL runtime.\n" );
+				trap_Cvar_ForceSet( s_environment_effects->name, "0" );
+
+				// Cleanup already created effects while keeping sources
+				for( j = 0; j < src_count; ++j ) {
+					S_ShutdownSourceEFX( &srclist[j] );
+				}
+
+				// Continue creating sources, now without corresponding effects
+				useEfx = false;
+			}
+		}
+
 		src_count++;
 	}
+
 	if( !src_count ) {
 		return false;
 	}
@@ -253,6 +447,8 @@ void S_ShutdownSources( void ) {
 
 	// Destroy all the sources
 	for( i = 0; i < src_count; i++ ) {
+		// This call expects that the AL source is valid
+		S_ShutdownSourceEFX( &srclist[i] );
 		qalSourceStop( srclist[i].source );
 		qalDeleteSources( 1, &srclist[i].source );
 	}

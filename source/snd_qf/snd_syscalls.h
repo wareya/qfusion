@@ -172,10 +172,6 @@ static inline void trap_MemEmptyPool( struct mempool_s *pool, const char *filena
 	SOUND_IMPORT.Mem_EmptyPool( pool, filename, fileline );
 }
 
-static inline void trap_GetEntitySpatilization( int entnum, vec3_t origin, vec3_t velocity ) {
-	SOUND_IMPORT.GetEntitySpatilization( entnum, origin, velocity );
-}
-
 static inline void *trap_LoadLibrary( char *name, dllfunc_t *funcs ) {
 	return SOUND_IMPORT.Sys_LoadLibrary( name, funcs );
 }

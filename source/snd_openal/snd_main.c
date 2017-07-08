@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "snd_local.h"
 #include "snd_cmdque.h"
+#include "snd_env_sampler.h"
 
 static sndCmdPipe_t *s_cmdPipe;
 
@@ -33,6 +34,8 @@ cvar_t *s_openAL_device;
 
 cvar_t *s_doppler;
 cvar_t *s_sound_velocity;
+cvar_t *s_environment_effects;
+cvar_t *s_environment_sampling_quality;
 cvar_t *s_stereo2mono;
 cvar_t *s_globalfocus;
 
@@ -121,6 +124,17 @@ bool SF_Init( void *hwnd, int maxEntities, bool verbose ) {
 	s_stereo2mono = trap_Cvar_Get( "s_stereo2mono", "0", CVAR_ARCHIVE );
 	s_globalfocus = trap_Cvar_Get( "s_globalfocus", "0", CVAR_ARCHIVE );
 
+	s_environment_effects = trap_Cvar_Get( "s_environment_effects", "1", CVAR_ARCHIVE | CVAR_LATCH_SOUND );
+	if( !QAL_Is_EFX_ExtensionSupported() ) {
+		trap_Cvar_ForceSet( s_environment_effects->name, "0" );
+	}
+	s_environment_sampling_quality = trap_Cvar_Get( "s_environment_sampling_quality", "0.5", CVAR_ARCHIVE );
+	if ( s_environment_sampling_quality->value < 0 || s_environment_sampling_quality->value > 1.0f ) {
+		trap_Cvar_ForceSet( s_environment_effects->name, "0.5" );
+	}
+
+	ENV_Init();
+
 #ifdef ENABLE_PLAY
 	trap_Cmd_AddCommand( "play", SF_Play_f );
 #endif
@@ -192,6 +206,8 @@ void SF_Shutdown( bool verbose ) {
 	trap_Cmd_RemoveCommand( "pausemusic" );
 	trap_Cmd_RemoveCommand( "soundlist" );
 	trap_Cmd_RemoveCommand( "s_devices" );
+
+	ENV_Shutdown();
 
 	QAL_Shutdown();
 
@@ -469,6 +485,10 @@ void SF_PositionedRawSamples( int entnum, float fvol, float attenuation,
 */
 int S_API( void ) {
 	return SOUND_API_VERSION;
+}
+
+bool S_ExpectsThreadSafeCMImports( void ) {
+	return s_environment_effects->integer != 0;
 }
 
 /*
