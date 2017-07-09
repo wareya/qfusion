@@ -149,7 +149,7 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 	int userDeviceNum = -1;
 	char *devices, *defaultDevice;
 	cvar_t *s_openAL_device;
-	int attrList[4];
+	int attrList[6];
 	int *attrPtr;
 
 	alDevice = NULL;
@@ -215,6 +215,17 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 		*attrPtr++ = 1;
 	}
 
+	if( QAL_Is_HRTF_ExtensionSupported() ) {
+		*attrPtr++ = ALC_HRTF_SOFT;
+		*attrPtr++ = s_hrtf->integer ? 1 : 0;
+	} else if( s_hrtf->integer ) {
+		Com_Printf( S_COLOR_YELLOW "Warning: HRTF support has not been found.\n" );
+		// HRTF still might be forced by some other way (e.g. by some proprietary runtime).
+		Com_Printf( S_COLOR_YELLOW "HRTF effects will not be guaranteed.\n" );
+		Com_Printf( S_COLOR_YELLOW "HRTF feature requires the recent version of OpenAL SOFT runtime.\n" );
+		trap_Cvar_ForceSet( s_hrtf->name, "0" );
+	}
+
 	// Terminate the attributes pairs list
 	*attrPtr++ = 0;
 	*attrPtr++ = 0;
@@ -247,12 +258,13 @@ static bool S_Init( void *hwnd, int maxEntities, bool verbose ) {
 			Com_Printf( "\n" );
 		}
 
-		Com_Printf( "  Device:      %s\n", qalcGetString( alDevice, ALC_DEVICE_SPECIFIER ) );
-		Com_Printf( "  Vendor:      %s\n", qalGetString( AL_VENDOR ) );
-		Com_Printf( "  Version:     %s\n", qalGetString( AL_VERSION ) );
-		Com_Printf( "  Renderer:    %s\n", qalGetString( AL_RENDERER ) );
-		Com_Printf( "  EFX support: %s\n", QAL_Is_EFX_ExtensionSupported() ? "yes" : "no" );
-		Com_Printf( "  Extensions:  %s\n", qalGetString( AL_EXTENSIONS ) );
+		Com_Printf( "  Device:       %s\n", qalcGetString( alDevice, ALC_DEVICE_SPECIFIER ) );
+		Com_Printf( "  Vendor:       %s\n", qalGetString( AL_VENDOR ) );
+		Com_Printf( "  Version:      %s\n", qalGetString( AL_VERSION ) );
+		Com_Printf( "  Renderer:     %s\n", qalGetString( AL_RENDERER ) );
+		Com_Printf( "  EFX support:  %s\n", QAL_Is_EFX_ExtensionSupported() ? "yes" : "no" );
+		Com_Printf( "  HRTF support: %s\n", QAL_Is_HRTF_ExtensionSupported() ? "yes" : "no" );
+		Com_Printf( "  Extensions:   %s\n", qalGetString( AL_EXTENSIONS ) );
 	}
 
 	// Check for Linux shutdown race condition

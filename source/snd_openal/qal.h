@@ -232,6 +232,11 @@ extern LPALCCAPTURESAMPLES qalcCaptureSamples;
 #define qalcCaptureSamples alcCaptureSamples
 #endif
 
+/* HRTF */
+#ifndef ALC_HRTF_SOFT
+#define ALC_HRTF_SOFT                            0x1992
+#endif
+
 // QFusion: always load EFX extension functions manually
 
 typedef void ( AL_APIENTRY * LPALGENEFFECTS )( ALsizei, ALuint* );
@@ -407,5 +412,7 @@ void QAL_Shutdown( void );
 // Check whether the extension is de-facto supported on loading.
 // qalIsExtensionSupported()/qalcIsExtensionSupported() lie sometimes.
 bool QAL_Is_EFX_ExtensionSupported();
+
+bool QAL_Is_HRTF_ExtensionSupported();
 
 #endif  // __QAL_H__

@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 static bool alinit_fail = false;
 static bool efx_init_fail = false;
+static bool hrtf_init_fail = false;
 
 LPALGENEFFECTS qalGenEffects;
 LPALDELETEEFFECTS qalDeleteEffects;
@@ -273,6 +274,23 @@ static void QAL_EFX_Shutdown() {
 	efx_init_fail = false;
 }
 
+static void QAL_HRTF_Init() {
+	bool old_alinit_fail = alinit_fail;
+	alinit_fail = false;
+
+	// Just test whether these symbols are present.
+	// http://kcat.strangesoft.net/openal-extensions/SOFT_HRTF.txt
+	GPA( "alcGetStringiSOFT" );
+	GPA( "alcResetDeviceSOFT" );
+
+	hrtf_init_fail = alinit_fail;
+	alinit_fail = old_alinit_fail;
+}
+
+static void QAL_HRTF_Shutdown() {
+	hrtf_init_fail = false;
+}
+
 /*
 * QAL_Init
 */
@@ -379,6 +397,7 @@ bool QAL_Init( const char *libname, bool verbose ) {
 	qalcGetString = GPA( "alcGetString" );
 	qalcGetIntegerv = GPA( "alcGetIntegerv" );
 
+	QAL_HRTF_Init();
 	QAL_EFX_Init();
 
 	if( alinit_fail ) {
@@ -400,6 +419,7 @@ void QAL_Shutdown( void ) {
 	}
 
 	QAL_EFX_Shutdown();
+	QAL_HRTF_Shutdown();
 
 	qalEnable = NULL;
 	qalDisable = NULL;
@@ -495,4 +515,8 @@ void QAL_Shutdown( void ) {
 
 bool QAL_Is_EFX_ExtensionSupported() {
 	return !efx_init_fail;
+}
+
+bool QAL_Is_HRTF_ExtensionSupported() {
+	return !hrtf_init_fail;
 }
