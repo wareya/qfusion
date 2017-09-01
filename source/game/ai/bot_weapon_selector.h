@@ -316,6 +316,11 @@ private:
 		return Inventory()[WeaponAmmo < Weapon > ::strongAmmoTag] + Inventory()[WeaponAmmo < Weapon > ::weakAmmoTag];
 	}
 
+	inline int BlastsReadyToFireCount() const {
+		// Check only strong ammo, the weak ammo enables blade attack
+		return Inventory()[AMMO_GUNBLADE];
+	}
+
 	inline int ShellsReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_RIOTGUN>(); }
 	inline int GrenadesReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_GRENADELAUNCHER>(); }
 	inline int RocketsReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_ROCKETLAUNCHER>(); }
