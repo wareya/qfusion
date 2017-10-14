@@ -5,7 +5,7 @@ cache:
   directories:
     - $HOME/.deps
 notifications:
-  email: true
+  email:
     recipients:
       mwagawsw@gmail.com
     on_success: change
