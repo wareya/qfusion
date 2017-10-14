@@ -262,7 +262,7 @@ void CL_UIModule_Init( void ) {
 	import.R_GetShaderCinematic = re.GetShaderCinematic;
 
 	import.S_RegisterSound = CL_SoundModule_RegisterSound;
-	import.S_StartLocalSound = CL_SoundModule_StartLocalSound;
+	import.S_StartLocalSound = CL_SoundModule_StartLocalSoundByName;
 	import.S_StartBackgroundTrack = CL_SoundModule_StartBackgroundTrack;
 	import.S_StopBackgroundTrack = CL_SoundModule_StopBackgroundTrack;
 

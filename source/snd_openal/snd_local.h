@@ -31,6 +31,7 @@ typedef struct { char *name; void **funcPointer; } dllfunc_t;
 
 #include "../client/snd_public.h"
 #include "snd_syscalls.h"
+#include "snd_cmdque.h"
 
 #include "qal.h"
 
@@ -44,6 +45,12 @@ typedef struct { char *name; void **funcPointer; } dllfunc_t;
 #define ALDRIVER "libopenal.so.1"
 #define ALDRIVER_ALT "libopenal.so.0"
 #define ALDEVICE_DEFAULT NULL
+#endif
+
+#ifdef __MACOSX__
+#define MAX_SRC 64
+#else
+#define MAX_SRC 128
 #endif
 
 extern struct mempool_s *soundpool;
@@ -74,6 +81,9 @@ extern cvar_t *s_stereo2mono;
 
 extern cvar_t *s_doppler;
 extern cvar_t *s_sound_velocity;
+extern cvar_t *s_environment_effects;
+extern cvar_t *s_environment_sampling_quality;
+extern cvar_t *s_hrtf;
 
 extern cvar_t *s_globalfocus;
 
@@ -94,6 +104,7 @@ extern ALCcontext *alContext;
 * Exported functions
 */
 int S_API( void );
+bool S_ExpectsThreadSafeCMImports( void );
 void S_Error( const char *format, ... );
 
 void S_FreeSounds( void );
@@ -111,7 +122,7 @@ void S_StartFixedSound( struct sfx_s *sfx, const vec3_t origin, int channel, flo
 void S_StartRelativeSound( struct sfx_s *sfx, int entnum, int channel, float fvol, float attenuation );
 void S_StartGlobalSound( struct sfx_s *sfx, int channel, float fvol );
 
-void S_StartLocalSound( sfx_t *sfx );
+void S_StartLocalSound( sfx_t *sfx, float fvol );
 
 void S_AddLoopSound( struct sfx_s *sfx, int entnum, float fvol, float attenuation );
 
@@ -158,11 +169,64 @@ sfx_t *S_GetBufferById( int id );
 bool S_LoadBuffer( sfx_t *sfx );
 bool S_UnloadBuffer( sfx_t *sfx );
 
+typedef struct {
+	float density;              // [0.0 ... 1.0]    default 1.0
+	float diffusion;            // [0.0 ... 1.0]    default 1.0
+	float gain;                 // [0.0 ... 1.0]    default 0.32
+	float gainHf;               // [0.0 ... 1.0]    default 0.89
+	float decayTime;            // [0.1 ... 20.0]   default 1.49
+	float reflectionsGain;      // [0.0 ... 3.16]   default 0.05
+	float reflectionsDelay;     // [0.0 ... 0.3]    default 0.007
+	float lateReverbGain;       // [0.0 ... 10.0]   default 1.26
+	float lateReverbDelay;      // [0.0 ... 0.1]    default 0.011
+} reverbProps_t;
+
+typedef struct envProps_s {
+	float directObstruction;
+	reverbProps_t reverbProps;
+	bool useEfx;
+	bool useFlanger;
+} envProps_t;
+
+typedef struct {
+	float quality;
+	unsigned numSamples;
+	uint16_t valueIndex;
+} samplingProps_t;
+
+typedef struct envUpdateState_s {
+	sfx_t *parent;
+
+	int64_t nextEnvUpdateAt;
+	int64_t lastEnvUpdateAt;
+
+	envProps_t oldEnvProps;
+	envProps_t envProps;
+
+	samplingProps_t directObstructionSamplingProps;
+	samplingProps_t reverbPrimaryRaysSamplingProps;
+
+	vec3_t lastUpdateOrigin;
+	vec3_t lastUpdateVelocity;
+
+	int entNum;
+	float attenuation;
+
+	float priorityInQueue;
+
+	bool wasInLiquid;
+} envUpdateState_t;
+
 /*
 * Source management
 */
 typedef struct src_s {
 	ALuint source;
+
+	ALuint directFilter;
+	ALuint effect;
+	ALuint effectSlot;
+
 	sfx_t *sfx;
 
 	cvar_t *volumeVar;
@@ -181,8 +245,28 @@ typedef struct src_s {
 	bool isTracking;
 	bool keepAlive;
 
+	envUpdateState_t envUpdateState;
+
 	vec3_t origin, velocity; // for local culling
 } src_t;
+
+typedef struct reverbParamDef_s {
+	const char *name;
+	ALenum param;
+	unsigned propsMemberOffset;
+	float minValue;
+	float maxValue;
+	float defaultValue;
+} reverbParamDef_t;
+
+#define NUM_REVERB_PARAMS ( 9 )
+
+extern const reverbParamDef_t reverbParamsDefs[NUM_REVERB_PARAMS];
+
+#define QF_METERS_PER_UNIT ( 0.038f )
+
+extern src_t srclist[MAX_SRC];
+extern int src_count;
 
 bool S_InitSources( int maxEntities, bool verbose );
 void S_ShutdownSources( void );
@@ -195,6 +279,7 @@ void S_StopAllSources( void );
 ALuint S_GetALSource( const src_t *src );
 src_t *S_AllocRawSource( int entNum, float fvol, float attenuation, cvar_t *volumeVar );
 void S_SetEntitySpatialization( int entnum, const vec3_t origin, const vec3_t velocity );
+void S_UpdateEFX( src_t *src );
 
 /*
 * Music
@@ -280,7 +365,8 @@ void SF_SetAttenuationModel( int model, float maxdistance, float refdistance );
 void SF_StartFixedSound( sfx_t *sfx, const vec3_t origin, int channel, float fvol, float attenuation );
 void SF_StartRelativeSound( sfx_t *sfx, int entnum, int channel, float fvol, float attenuation );
 void SF_StartGlobalSound( sfx_t *sfx, int channel, float fvol );
-void SF_StartLocalSound( const char *sound );
+void SF_StartLocalSoundByName( const char *sound );
+void SF_StartLocalSound( sfx_t *sfx, float fvol );
 void SF_Clear( void );
 void SF_AddLoopSound( sfx_t *sfx, int entnum, float fvol, float attenuation );
 void SF_Update( const vec3_t origin, const vec3_t velocity, const mat3_t axis, bool avidump );

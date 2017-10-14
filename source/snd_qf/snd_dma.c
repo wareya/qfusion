@@ -1411,7 +1411,7 @@ static unsigned S_HandleSetListenerCmd( const sndCmdSetListener_t *cmd ) {
 */
 static unsigned S_HandleStartLocalSoundCmd( const sndCmdStartLocalSound_t *cmd ) {
 	//Com_Printf("S_HandleStartLocalSoundCmd\n");
-	S_StartGlobalSound( known_sfx + cmd->sfx, 0, 1 );
+	S_StartGlobalSound( known_sfx + cmd->sfx, 0, cmd->fvol );
 	return sizeof( *cmd );
 }
 
@@ -1625,7 +1625,7 @@ static pipeCmdHandler_t sndCmdHandlers[SND_CMD_NUM_CMDS] =
 	/* SND_CMD_STUFFCMD */
 	(pipeCmdHandler_t)S_HandleStuffCmd,
 	/* SND_CMD_SET_MUL_ENTITY_SPATIALIZATION */
-	(pipeCmdHandler_t)S_HandleSetMulEntitySpatializationCmd,
+	(pipeCmdHandler_t)S_HandleSetMulEntitySpatializationCmd
 };
 
 /*
