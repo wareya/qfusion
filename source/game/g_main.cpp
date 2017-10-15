@@ -61,6 +61,9 @@ cvar_t *g_inactivity_maxtime;
 
 cvar_t *g_projectile_touch_owner;
 cvar_t *g_projectile_prestep;
+cvar_t *g_shockwave_fly_stun_scale;
+cvar_t *g_shockwave_fly_damage_scale;
+cvar_t *g_shockwave_fly_knockback_scale;
 cvar_t *g_numbots;
 cvar_t *g_maxtimeouts;
 cvar_t *g_antilag;
@@ -258,6 +261,9 @@ void G_Init( unsigned int seed, unsigned int framemsec, int protocol, const char
 	g_select_empty = trap_Cvar_Get( "g_select_empty", "0", CVAR_DEVELOPER );
 	g_projectile_touch_owner = trap_Cvar_Get( "g_projectile_touch_owner", "0", CVAR_DEVELOPER );
 	g_projectile_prestep = trap_Cvar_Get( "g_projectile_prestep", va( "%i", PROJECTILE_PRESTEP ), CVAR_DEVELOPER );
+	g_shockwave_fly_stun_scale = trap_Cvar_Get( "g_shockwave_fly_stun_scale", "1.0", CVAR_DEVELOPER );
+	g_shockwave_fly_damage_scale = trap_Cvar_Get( "g_shockwave_fly_damage_scale", "2.0", CVAR_DEVELOPER );
+	g_shockwave_fly_knockback_scale = trap_Cvar_Get( "g_shockwave_fly_knockback_scale", "8.0", CVAR_DEVELOPER );
 	g_self_knockback = trap_Cvar_Get( "g_self_knockback", "1.18", CVAR_DEVELOPER );
 	g_knockback_scale = trap_Cvar_Get( "g_knockback_scale", "1.0", CVAR_ARCHIVE );
 	g_allow_stun = trap_Cvar_Get( "g_allow_stun", "1", CVAR_ARCHIVE );

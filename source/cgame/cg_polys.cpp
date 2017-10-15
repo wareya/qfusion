@@ -388,6 +388,27 @@ void CG_PLink( const vec3_t start, const vec3_t end, const vec4_t color, int fla
 	CG_SpawnPolyBeam( start, end, color, 4, 2000.0f, 0.0f, CG_MediaShader( cgs.media.shaderLaser ), 64, 0 );
 }
 
+void CG_WaveSpark( const vec3_t emitterOrigin ) {
+	vec3_t end;
+	float dirScale;
+
+	// First make a random direction
+	// TODO: Extract a function, a similar code is used in sound environment sampling (not in this branch yet)
+	float theta = (float)( ( M_PI * 2 ) * 0.999999 * random() );
+	float phi = (float)( M_PI * random() );
+	float sinTheta = sinf( theta );
+	float cosTheta = cosf( theta );
+	float sinPhi = sinf( phi );
+	float cosPhi = cosf( phi );
+
+	VectorSet( end, sinTheta * cosPhi, sinTheta * sinPhi, cosTheta );
+	dirScale = 5.0f + 20.0f * random();
+	VectorScale( end, dirScale, end );
+	VectorAdd( end, emitterOrigin, end );
+
+	CG_SpawnPolyBeam( emitterOrigin, end, NULL, 8, 64, 64, CG_MediaShader( cgs.media.shaderWaveSparks ), 0, 0 );
+}
+
 /*
 * CG_Addpolys
 */

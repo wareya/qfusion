@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "g_local.h"
+#include "../gameshared/q_collision.h"
 
 // commented out to make gcc happy
 #if 0
@@ -1216,6 +1217,173 @@ edict_t *W_Fire_Electrobolt_Weak( edict_t *self, vec3_t start, vec3_t angles, fl
 	bolt->s.effects &= ~EF_STRONG_WEAPON;
 
 	return bolt;
+}
+
+static void W_Think_Wave( edict_t *ent ) {
+	if( ent->timeout < level.time ) {
+		G_FreeEdict( ent );
+		return;
+	}
+
+	if( ent->r.inuse ) {
+		ent->nextThink = level.time + 1;
+	}
+
+	// Check whether the corona damage has not been activated yet
+	const firedef_t *firedef;
+	if( ent->style == MOD_SHOCKWAVE_S ) {
+		firedef = &GS_GetWeaponDef( WEAP_SHOCKWAVE )->firedef;
+	} else {
+		firedef = &GS_GetWeaponDef( WEAP_SHOCKWAVE )->firedef_weak;
+	}
+
+	if( level.time - ent->timeStamp < ( ( 1000 * firedef->splash_radius ) / firedef->speed ) + 64 ) {
+		return;
+	}
+
+	// TODO: We're falling into "continuous collision detection" problem here.
+	// We're not sure what is the proper way to resolve ones.
+    // If we check entities in a transformed box covered by the wave, how do we check visibility?
+	// Neither antilag nor projectile offset are applied for same reasons.
+
+	int entNums[64];
+	int numEnts = GClip_FindInRadius( ent->s.origin, ent->projectileInfo.radius, entNums, 64 );
+	clamp_high( numEnts, 64 );
+
+	// Let us assume if a target stands still and the ingoing wave projectile flies
+	// has flown away almost hitting it, the target should get the same damage as a direct hit.
+	// Thus the projectile affects the target for Ta = ( 2 * radius ) / speed
+	// Consequently DPS = ( direct hit damage ) / Ta = ( direct hit damage ) * speed / ( 2 * radius )
+	// All time units are assumed to be in seconds
+
+	float dps = ent->projectileInfo.maxDamage * VectorLengthFast( ent->velocity ) / ( 2.0f * ent->projectileInfo.radius );
+	float frameTimeSeconds = 0.001f * game.frametime;
+
+	const float stun = g_shockwave_fly_stun_scale->value * ent->projectileInfo.stun * frameTimeSeconds;
+	// We have discovered that theoretical best dps is not substantial enough for a player to fear it
+	// since players are not standing still waiting to absorb all potential damage.
+	// Thus we add an extra scale to the damage
+	const float damage = g_shockwave_fly_damage_scale->value * dps * frameTimeSeconds;
+	// Same applies to knockback. Moreover we want to keep explosion knockback on GB level
+	// and highly increase the knockback for area damage to be able to push enemy back.
+	const float knockback = g_shockwave_fly_knockback_scale->value * ent->projectileInfo.maxKnockback * frameTimeSeconds;
+
+	trace_t trace;
+	edict_t *attacker = game.edicts + ent->s.ownerNum;
+
+	// For each entity in radius
+	for( int i = 0; i < numEnts; ++i ) {
+		edict_t *other = game.edicts + entNums[i];
+		// If the entity is not damageable
+		if( !other->takedamage ) {
+			continue;
+		}
+
+		float *origin = ent->s.origin;
+		edict_t *ignore = ent;
+		// Try tracing from wave origin to other entity origin.
+		for(;; ) {
+			G_Trace( &trace, origin, NULL, NULL, other->s.origin, ignore, MASK_PLAYERSOLID );
+			// Stop if there is no hit occured
+			if( trace.fraction == 1.0f ) {
+				break;
+			}
+			// Stop if a solid world is hit
+			if( trace.ent <= 0 ) {
+				break;
+			}
+
+			if( game.edicts + trace.ent == other ) {
+				vec3_t dir;
+				VectorSubtract( other->s.origin, ent->s.origin, dir );
+				int mod = ( ent->style == MOD_SHOCKWAVE_S ) ? MOD_SHOCKWAVE_CORONA_S : MOD_SHOCKWAVE_CORONA_W;
+				G_Damage( other, ent, attacker, dir, dir, vec3_origin, damage, knockback, stun, DAMAGE_RADIUS, mod );
+				break;
+			}
+
+			// Stop if a solid and not-damageable entity is hit
+			if( !game.edicts[trace.ent].takedamage ) {
+				break;
+			}
+
+			// Continue tracing from the orgin of an entity the trace has hit ignoring it
+			ignore = &game.edicts[trace.ent];
+			origin = game.edicts[trace.ent].s.origin;
+		}
+	}
+}
+
+static void W_Touch_Wave( edict_t *ent, edict_t *other, cplane_t *plane, int surfFlags ) {
+	vec3_t dir;
+	int hitType;
+
+	if( surfFlags & SURF_NOIMPACT ) {
+		G_FreeEdict( ent );
+		return;
+	}
+
+	hitType = G_Projectile_HitStyle( ent, other );
+	if( hitType == PROJECTILE_TOUCH_NOT ) {
+		return;
+	}
+
+	if( other->takedamage ) {
+		VectorNormalize2( ent->velocity, dir );
+
+		if( hitType == PROJECTILE_TOUCH_DIRECTSPLASH ) { // use hybrid direction from splash and projectile
+			G_SplashFrac4D( ENTNUM( other ), ent->s.origin, ent->projectileInfo.radius, dir, NULL, NULL, ent->timeDelta );
+		} else {
+			VectorNormalize2( ent->velocity, dir );
+		}
+
+		G_Damage( other, ent, ent->r.owner, dir, ent->velocity, ent->s.origin, ent->projectileInfo.maxDamage, ent->projectileInfo.maxKnockback, ent->projectileInfo.stun, 0, ent->style );
+	}
+
+	G_RadiusDamage( ent, ent->r.owner, plane, other, ( ent->style == MOD_SHOCKWAVE_S ) ? MOD_SHOCKWAVE_SPLASH_S : MOD_SHOCKWAVE_SPLASH_W );
+
+	if( !( surfFlags & SURF_NOIMPACT ) ) {
+		edict_t *event;
+		vec3_t explosion_origin;
+
+		VectorMA( ent->s.origin, -0.02, ent->velocity, explosion_origin );
+		event = G_SpawnEvent( EV_WAVE_EXPLOSION, DirToByte( plane ? plane->normal : NULL ), explosion_origin );
+		event->s.firemode = ( ent->s.effects & EF_STRONG_WEAPON ) ? FIRE_MODE_STRONG : FIRE_MODE_WEAK;
+		event->s.weapon = ( ( ent->projectileInfo.radius * 1 / 8 ) > 255 ) ? 255 : ( ent->projectileInfo.radius * 1 / 8 );
+	}
+
+	// free at next frame
+	G_FreeEdict( ent );
+}
+
+edict_t *W_Fire_Shockwave( edict_t *self, vec3_t start, vec3_t angles, int speed, float damage, int minKnockback, int maxKnockback, int stun, int minDamage, int radius, int timeout, int mod, int timeDelta ) {
+	edict_t *wave;
+
+	if( GS_Instagib() ) {
+		damage = 9999;
+	}
+
+	wave = W_Fire_LinearProjectile( self, start, angles, speed, damage, minKnockback, maxKnockback, stun, minDamage, radius, timeout, timeDelta );
+	if( mod == MOD_SHOCKWAVE_S ) {
+		wave->s.modelindex = trap_ModelIndex( PATH_WAVE_STRONG_MODEL );
+		wave->s.sound = trap_SoundIndex( S_WEAPON_SHOCKWAVE_S_FLY );
+		wave->s.effects |= EF_STRONG_WEAPON;
+	} else {
+		wave->s.modelindex = trap_ModelIndex( PATH_WAVE_WEAK_MODEL );
+		wave->s.sound = trap_SoundIndex( S_WEAPON_SHOCKWAVE_W_FLY );
+		wave->s.effects &= ~EF_STRONG_WEAPON;
+	}
+
+	wave->s.type = ET_WAVE;
+	wave->classname = "wave";
+	wave->style = mod;
+	wave->s.ownerNum = ENTNUM( self );
+
+	wave->think = W_Think_Wave;
+	wave->touch = W_Touch_Wave;
+	wave->timeout = level.time + timeout;
+	wave->nextThink = level.time + 1;
+
+	return wave;
 }
 
 /*

@@ -702,6 +702,80 @@ gs_weapon_definition_t gs_weaponDefs[] =
 	},
 
 	{
+		"Shockwave",
+		WEAP_SHOCKWAVE,
+		{
+			FIRE_MODE_STRONG,
+			AMMO_WAVES,
+			1,                              // ammo usage per shot
+			1,                              // projectiles fired each shot
+
+			//timings (in msecs)
+			WEAPONUP_FRAMETIME,             // weapon up frametime
+			WEAPONDOWN_FRAMETIME,           // weapon down frametime
+			950,                            // reload frametime (same as RL)
+			0,                              // cooldown frametime
+			10000,                          // projectile timeout
+			false,                          // smooth refire
+
+			//damages
+			55,                             // damage
+			1.0,                            // selfdamage ratio
+			90,                             // knockback (as gunblade)
+			500,                            // stun
+			90,                             // splash radius
+			55,                             // minimum damage
+			35,                             // minimum knockback
+
+			//projectile def
+			900,                            // speed (VQ3 rocket speed)
+			0,                              // spread
+			0,                              // v_spread
+
+			//ammo
+			5,                              // weapon pickup amount
+			10,                             // pickup amount
+			10,                             // max amount
+			3                               // low ammo threshold
+		},
+
+		{
+			FIRE_MODE_WEAK,
+			AMMO_WEAK_WAVES,
+			1,                              // ammo usage per shot
+			1,                              // projectiles fired each shot
+
+			//timings (in msecs)
+			WEAPONUP_FRAMETIME,             // weapon up frametime
+			WEAPONDOWN_FRAMETIME,           // weapon down frametime
+			950,                            // reload frametime (same as RL)
+			0,                              // cooldown frametime
+			10000,                          // projectile timeout
+			false,                          // smooth refire
+
+			//damages
+			55,                             // damage
+			0,                              // selfdamage ratio
+			90,                             // knockback
+			500,                            // stun
+			90,                             // splash radius
+			55,                             // minimum damage
+			35,                             // minimum knockback
+
+			//projectile def
+			900,                            // speed
+			0,                              // spread
+			0,                              // v_spread
+
+			//ammo
+			0,                              // weapon pickup amount
+			0,                              // pickup amount
+			0,                              // max amount
+			0                               // low ammo threshold
+		},
+	},
+
+	{
 		"Instagun",
 		WEAP_INSTAGUN,
 		{

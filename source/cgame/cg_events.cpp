@@ -1479,6 +1479,17 @@ void CG_EntityEvent( entity_state_t *ent, int ev, int parm, bool predicted ) {
 			}
 			break;
 
+		case EV_WAVE_EXPLOSION:
+			ByteToDir( parm, dir );
+			CG_WaveExplosionMode( ent->origin, dir, ent->firemode, (float)ent->weapon * 8.0f );
+
+			if( ent->firemode == FIRE_MODE_STRONG ) {
+				CG_StartKickAnglesEffect( ent->origin, 90, ent->weapon * 8, 200 );
+			} else {
+				CG_StartKickAnglesEffect( ent->origin, 90, ent->weapon * 8, 200 );
+			}
+			break;
+
 		case EV_GRENADE_BOUNCE:
 			if( parm == FIRE_MODE_STRONG ) {
 				trap_S_StartRelativeSound( CG_MediaSfx( cgs.media.sfxGrenadeStrongBounce[rand() & 1] ), ent->number, CHAN_AUTO, cg_volume_effects->value, ATTN_IDLE );

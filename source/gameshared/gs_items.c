@@ -257,6 +257,29 @@ gsitem_t itemdefs[] =
 		NULL
 	},
 
+	//QUAKED shockwave
+	{
+		"weapon_shockwave",
+		WEAP_SHOCKWAVE,
+		IT_WEAPON,
+		ITFLAG_PICKABLE | ITFLAG_USABLE | ITFLAG_DROPABLE | ITFLAG_STAY_COOP,
+
+		{ PATH_SHOCKWAVE_MODEL, PATH_SHOCKWAVE_BARREL_MODEL },
+		PATH_SHOCKWAVE_ICON,
+		PATH_SHOCKWAVE_SIMPLEITEM,
+		S_PICKUP_WEAPON,
+		EF_ROTATE_AND_BOB | EF_OUTLINE,
+
+		"Shockwave", "SW", S_COLOR_WHITE,
+		1,
+		1,
+		AMMO_WAVES,
+		AMMO_WEAK_WAVES,
+		NULL,
+		NULL,
+		NULL
+	},
+
 	//QUAKED instagun
 	{
 		"weapon_instagun",
@@ -463,6 +486,27 @@ gsitem_t itemdefs[] =
 	},
 
 	{
+		"ammo_shockwave",
+		AMMO_WAVES,
+		IT_AMMO,
+		ITFLAG_PICKABLE | ITFLAG_DROPABLE,
+
+		{ PATH_AMMO_BOX_MODEL, PATH_AMMO_BOX_MODEL2 },
+		PATH_INSTAGUN_AMMO_ICON,
+		PATH_INSTAGUN_AMMO_ICON,
+		S_PICKUP_AMMO,
+		EF_ROTATE_AND_BOB | EF_OUTLINE | EF_AMMOBOX,
+
+		"Waves", "waves", S_COLOR_WHITE,
+		0, // actual value comes from weapondefs instead
+		0, // actual value comes from weapondefs instead
+		AMMO_NONE,
+		AMMO_NONE,
+		NULL,
+		NULL, NULL, NULL
+	},
+
+	{
 		"ammo_instagun",
 		AMMO_INSTAS,
 		IT_AMMO,
@@ -655,6 +699,27 @@ gsitem_t itemdefs[] =
 		0,
 
 		"Weak Bolts", "weak bolts", NULL,
+		0, // actual value comes from weapondefs instead
+		0, // actual value comes from weapondefs instead
+		AMMO_NONE,
+		AMMO_NONE,
+		NULL,
+		NULL, NULL, NULL
+	},
+
+	{
+		"ammo_shockwave_weak",
+		AMMO_WEAK_WAVES,
+		IT_AMMO,
+		0,
+
+		{ 0, 0 },
+		NULL,
+		NULL,
+		NULL,
+		0,
+
+		"Weak Waves", "weak waves", NULL,
 		0, // actual value comes from weapondefs instead
 		0, // actual value comes from weapondefs instead
 		AMMO_NONE,

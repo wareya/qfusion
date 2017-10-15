@@ -123,6 +123,9 @@ void CG_RegisterMediaSounds( void ) {
 	cgs.media.sfxLasergunHit[1] = CG_RegisterMediaSfx( S_WEAPON_LASERGUN_HIT_1, true );
 	cgs.media.sfxLasergunHit[2] = CG_RegisterMediaSfx( S_WEAPON_LASERGUN_HIT_2, true );
 
+	cgs.media.sfxWaveWeakHit = CG_RegisterMediaSfx( S_WEAPON_SHOCKWAVE_W_HIT, true );
+	cgs.media.sfxWaveStrongHit = CG_RegisterMediaSfx( S_WEAPON_SHOCKWAVE_S_HIT, true );
+
 	cgs.media.sfxElectroboltHit = CG_RegisterMediaSfx( S_WEAPON_ELECTROBOLT_HIT, true );
 
 	cgs.media.sfxQuadFireSound = CG_RegisterMediaSfx( S_QUAD_FIRE, true );
@@ -346,10 +349,14 @@ void CG_RegisterMediaShaders( void ) {
 	cgs.media.shaderElectroBeamBAlpha = CG_RegisterMediaShader( "gfx/misc/electro2b_alpha", true );
 	cgs.media.shaderElectroBeamBBeta = CG_RegisterMediaShader( "gfx/misc/electro2b_beta", true );
 	cgs.media.shaderElectroBeamRing = CG_RegisterMediaShader( "gfx/misc/beamring.tga", true );
+	cgs.media.shaderWaveCorona = CG_RegisterMediaShader( "gfx/misc/shockwave_corona", true );
+	cgs.media.shaderWaveSparks = CG_RegisterMediaShader( "gfx/misc/shockwave_sparks", true );
 	cgs.media.shaderInstaBeam = CG_RegisterMediaShader( "gfx/misc/instagun", true );
 	cgs.media.shaderLaserGunBeam = CG_RegisterMediaShader( "gfx/misc/laserbeam", true );
 	cgs.media.shaderRocketExplosion = CG_RegisterMediaShader( PATH_ROCKET_EXPLOSION_SPRITE, true );
 	cgs.media.shaderRocketExplosionRing = CG_RegisterMediaShader( PATH_ROCKET_EXPLOSION_RING_SPRITE, true );
+	cgs.media.shaderWaveExplosion = CG_RegisterMediaShader( PATH_WAVE_EXPLOSION_SPRITE, true );
+	cgs.media.shaderWaveExplosionRing = CG_RegisterMediaShader( PATH_WAVE_EXPLOSION_RING_SPRITE, true );
 
 	cgs.media.shaderLaser = CG_RegisterMediaShader( "gfx/misc/laser", false );
 
@@ -367,6 +374,7 @@ void CG_RegisterMediaShaders( void ) {
 	cgs.media.shaderWeaponIcon[WEAP_PLASMAGUN - 1] = CG_RegisterMediaShader( PATH_PLASMAGUN_ICON, true );
 	cgs.media.shaderWeaponIcon[WEAP_LASERGUN - 1] = CG_RegisterMediaShader( PATH_LASERGUN_ICON, true );
 	cgs.media.shaderWeaponIcon[WEAP_ELECTROBOLT - 1] = CG_RegisterMediaShader( PATH_ELECTROBOLT_ICON, true );
+	cgs.media.shaderWeaponIcon[WEAP_SHOCKWAVE - 1] = CG_RegisterMediaShader( PATH_SHOCKWAVE_ICON, true );
 	cgs.media.shaderWeaponIcon[WEAP_INSTAGUN - 1] = CG_RegisterMediaShader( PATH_INSTAGUN_ICON, true );
 
 	cgs.media.shaderNoGunWeaponIcon[WEAP_GUNBLADE - 1] = CG_RegisterMediaShader( PATH_NG_GUNBLADE_ICON, true );
@@ -377,6 +385,7 @@ void CG_RegisterMediaShaders( void ) {
 	cgs.media.shaderNoGunWeaponIcon[WEAP_PLASMAGUN - 1] = CG_RegisterMediaShader( PATH_NG_PLASMAGUN_ICON, true );
 	cgs.media.shaderNoGunWeaponIcon[WEAP_LASERGUN - 1] = CG_RegisterMediaShader( PATH_NG_LASERGUN_ICON, true );
 	cgs.media.shaderNoGunWeaponIcon[WEAP_ELECTROBOLT - 1] = CG_RegisterMediaShader( PATH_NG_ELECTROBOLT_ICON, true );
+	cgs.media.shaderNoGunWeaponIcon[WEAP_SHOCKWAVE - 1] = CG_RegisterMediaShader( PATH_NG_SHOCKWAVE_ICON, true );
 	cgs.media.shaderNoGunWeaponIcon[WEAP_INSTAGUN - 1] = CG_RegisterMediaShader( PATH_NG_INSTAGUN_ICON, true );
 
 	cgs.media.shaderGunbladeBlastIcon = CG_RegisterMediaShader( PATH_GUNBLADE_BLAST_ICON, true );
