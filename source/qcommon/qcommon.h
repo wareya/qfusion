@@ -48,6 +48,7 @@ struct ginfo_s;
 struct client_s;
 struct cmodel_state_s;
 struct client_entities_s;
+struct fatvis_s;
 
 //============================================================================
 
@@ -150,7 +151,7 @@ void SNAP_WriteFrameSnapToClient( struct ginfo_s *gi, struct client_s *client, m
 								  int numcmds, gcommand_t *commands, const char *commandsData );
 
 void SNAP_BuildClientFrameSnap( struct cmodel_state_s *cms, struct ginfo_s *gi, int64_t frameNum, int64_t timeStamp,
-								struct client_s *client,
+								struct fatvis_s *fatvis, struct client_s *client,
 								game_state_t *gameState, struct client_entities_s *client_entities,
 								bool relay, struct mempool_s *mempool );
 
