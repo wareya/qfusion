@@ -11,6 +11,10 @@ static bool wasListenerInLiquid;
 static vec3_t randomDirectObstructionOffsets[(1 << 8)];
 static vec3_t randomReverbPrimaryRayDirs[(1 << 16)];
 
+#ifndef M_2_PI
+#define M_2_PI ( 2.0 * ( M_PI ) )
+#endif
+
 static inline void MakeRandomDirection( vec3_t dir ) {
 	float theta = ( float )( M_2_PI * 0.999999 * random() );
 	float phi = (float)( M_PI * random() );
