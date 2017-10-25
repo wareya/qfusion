@@ -68,9 +68,9 @@ install:
   - if [[ "$QF_ARCH" == "x86_64" ]]; then export CC=clang CXX=clang++; fi
   - if [[ "$QF_ARCH" == "x86" ]]; then export CC=gcc-4.9 CXX=g++-4.9; fi
   - cd "$TRAVIS_BUILD_DIR/source"
-  - if [[ "$QF_ARCH" == "x86_64" ]]; then cmake .; fi
-  - if [[ "$QF_ARCH" == "x86" ]]; then cmake -DCMAKE_TOOLCHAIN_FILE=cmake/i386-linux-gnu.cmake -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DGAME_MODULES_ONLY=1 .; fi
-  - if [[ "$QF_ARCH" == "OSX" ]]; then cmake -G Xcode .; fi
+  - if [[ "$QF_ARCH" == "x86_64" ]]; then cmake -DQFUSION_APPLICATION_VERSION_HEADER=\"version.warsow.h\" .; fi
+  - if [[ "$QF_ARCH" == "x86" ]]; then cmake -DQFUSION_APPLICATION_VERSION_HEADER=\"version.warsow.h\" -DCMAKE_TOOLCHAIN_FILE=cmake/i386-linux-gnu.cmake -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32 -DGAME_MODULES_ONLY=1 .; fi
+  - if [[ "$QF_ARCH" == "OSX" ]]; then cmake -DQFUSION_APPLICATION_VERSION_HEADER=\"version.warsow.h\" -G Xcode .; fi
   - if [[ "$QF_ARCH" == "android" ]]; then mkdir -p build/libs && cd ../platforms/android/projects/qfusion/jni && ln -s ../../../../../libsrcs libsrcs && ln -s ../../../../../third-party third-party && ln -s ../../../../../source source && ln -s ../../../../../icons icons; fi
   - cd "$TRAVIS_BUILD_DIR"
 
