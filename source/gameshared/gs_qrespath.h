@@ -169,14 +169,12 @@ extern "C" {
 
 // weapons
 #define PATH_GUNBLADE_MODEL     "models/weapons/gunblade/gunblade.md3"
-#define PATH_MACHINEGUN_MODEL       "models/weapons/machinegun/machinegun.iqm"
-#define PATH_MACHINEGUN_BARREL_MODEL        "models/weapons/machinegun/machinegun_barrel.iqm"
+#define PATH_MACHINEGUN_MODEL       "models/weapons/machinegun/machinegun.md3"
 #define PATH_RIOTGUN_MODEL      "models/weapons/riotgun/riotgun.md3"
-#define PATH_GRENADELAUNCHER_MODEL  "models/weapons/glauncher/glauncher.iqm"
-#define PATH_GRENADELAUNCHER_BARREL_MODEL   "models/weapons/glauncher/glauncher_barrel.iqm"
+#define PATH_GRENADELAUNCHER_MODEL  "models/weapons/glauncher/glauncher.md3"
 #define PATH_ROCKETLAUNCHER_MODEL   "models/weapons/rlauncher/rlauncher.md3"
 #define PATH_PLASMAGUN_MODEL        "models/weapons/plasmagun/plasmagun.md3"
-#define PATH_ELECTROBOLT_MODEL      "models/weapons/electrobolt/electrobolt.iqm"
+#define PATH_ELECTROBOLT_MODEL      "models/weapons/electrobolt/electrobolt.md3"
 #define PATH_SHOCKWAVE_MODEL      "models/weapons/shockwave/shockwave.md3"
 #define PATH_SHOCKWAVE_BARREL_MODEL "models/weapons/shockwave/shockwave_barrel.md3"
 #define PATH_LASERGUN_MODEL     "models/weapons/lasergun/lasergun.md3"
