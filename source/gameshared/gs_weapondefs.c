@@ -622,8 +622,8 @@ gs_weapon_definition_t gs_weaponDefs[] =
 			//ammo
 			0,                              // weapon pickup amount
 			0,                              // pickup amount
-			0,                              // max amount
-			0                               // low ammo threshold
+			150,                            // max amount
+			20                              // low ammo threshold
 		},
 	},
 
@@ -682,22 +682,22 @@ gs_weapon_definition_t gs_weaponDefs[] =
 			//damages
 			75,                             // damage
 			0,                              // selfdamage ratio
-			40,                             // knockback
+			80,                             // knockback (let it match instant one)
 			1000,                           // stun
 			0,                              // splash radius
 			75,                             // minimum damage
 			35,                             // minimum knockback
 
 			//projectile def
-			INSTANT,                        // speed
+			8000,                           // speed (old was 6000 but there was a forum whine on it)
 			0,                              // spread
 			0,                              // v_spread
 
 			//ammo
 			0,                              // weapon pickup amount
 			0,                              // pickup amount
-			0,                              // max amount
-			0                               // low ammo threshold
+			10,                             // max amount
+			3                               // low ammo threshold
 		},
 	},
 

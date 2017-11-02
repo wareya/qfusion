@@ -758,9 +758,12 @@ void CG_ElectroWeakTrail( const vec3_t start, const vec3_t end, const vec4_t col
 		VectorCopy( color, ucolor );
 	}
 
+	// Always draw projectile EB trail. Otherwise it is almost impossible to see the projectile.
+#if 0
 	if( !cg_particles->integer ) {
 		return;
 	}
+#endif
 
 	VectorCopy( start, move );
 	VectorSubtract( end, start, vec );

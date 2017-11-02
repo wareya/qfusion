@@ -1870,6 +1870,7 @@ void CG_AddEntities( void ) {
 				CG_AddGenericEnt( cent );
 				CG_EntityLoopSound( state, ATTN_STATIC );
 				CG_ElectroWeakTrail( cent->trailOrigin, cent->ent.origin, NULL );
+				CG_AddLightToScene( cent->ent.origin, 100, 0.9f, 0.9f, 1.0f );
 				break;
 			case ET_ROCKET:
 				CG_AddGenericEnt( cent );
