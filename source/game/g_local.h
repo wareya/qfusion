@@ -1068,9 +1068,6 @@ typedef struct {
 
 typedef struct {
 	int ebhit_count;
-	int directrocket_count;
-	int directgrenade_count;
-	int directwave_count;
 	int multifrag_timer;
 	int multifrag_count;
 	int frag_count;

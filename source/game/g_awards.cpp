@@ -22,9 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 #define EBHIT_FOR_AWARD     3
-#define DIRECTROCKET_FOR_AWARD  3
-#define DIRECTGRENADE_FOR_AWARD 3
-#define DIRECTWAVE_FOR_AWARD 3
 #define MULTIKILL_INTERVAL  3000
 #define LB_TIMEOUT_FOR_COMBO    200
 #define GUNBLADE_TIMEOUT_FOR_COMBO  400
@@ -310,12 +307,8 @@ void G_AwardPlayerKilled( edict_t *self, edict_t *inflictor, edict_t *attacker, 
 	static const int strongMeansOfDeath[3] = { MOD_ROCKET_S, MOD_GRENADE_S, MOD_SHOCKWAVE_S };
 	static const int weakMeansOfDeath[3] = { MOD_ROCKET_W, MOD_GRENADE_W, MOD_SHOCKWAVE_W };
 	static const char *weaponNames[3] = { "Rocket", "Grenade", "Shockwave" };
-	static const int countsForAward[] = { DIRECTROCKET_FOR_AWARD, DIRECTGRENADE_FOR_AWARD, DIRECTWAVE_FOR_AWARD };
 
 	award_info_t *awardInfo = &attacker->r.client->resp.awardInfo;
-	int *const directHitCounts[3] = {
-		&awardInfo->directrocket_count, &awardInfo->directgrenade_count, &awardInfo->directwave_count
-	};
 	int *const directAwardCounts[3] = {
 		&awardInfo->directrocket_award, &awardInfo->directgrenade_award, &awardInfo->directwave_award
 	};
@@ -325,13 +318,8 @@ void G_AwardPlayerKilled( edict_t *self, edict_t *inflictor, edict_t *attacker, 
 
 	for( int i = 0; i < 3; ++i ) {
 		if( mod == weakMeansOfDeath[i] || mod == strongMeansOfDeath[i] ) {
-			// direct hit
-			( *directHitCounts[i] )++;
-			if( ( *directHitCounts[i] ) == countsForAward[i] ) {
-				( *directHitCounts[i] ) = 0;
-				( *directAwardCounts[i] )++;
-				G_PlayerAward( attacker, va( S_COLOR_BLUE "Direct %s Hit!", weaponNames[i] ) );
-			}
+			( *directAwardCounts[i] )++;
+			G_PlayerAward( attacker, va( S_COLOR_BLUE "Direct %s Hit!", weaponNames[i] ) );
 
 			// Midair
 			if( !self->groundentity && !self->waterlevel ) {
