@@ -101,7 +101,8 @@ typedef struct {
 
 struct cmodel_state_s {
 	int checkcount;
-	int refcount;
+	int instance_refcount;      // how much users does this cmodel_state_t instance have
+	int *shared_data_refcount;  // how much users does the data shared between instances of cmodel_state_t have
 	struct mempool_s *mempool;
 
 	const bspFormatDesc_t *cmap_bspFormat;
@@ -123,24 +124,26 @@ struct cmodel_state_s {
 
 	int numleafs;                   // = 1
 	cleaf_t map_leaf_empty;         // allow leaf funcs to be called without a map
-	cleaf_t *map_leafs;             // = &map_leaf_empty;
+	cleaf_t *map_leafs;             // = &map_leaf_empty; instance-local (is not shared)
 
 	int nummarkbrushes;
-	cbrush_t **map_markbrushes;
+	cbrush_t **map_markbrushes;     // instance-local (is not shared)
 
 	int numcmodels;
 	cmodel_t map_cmodel_empty;
-	cmodel_t *map_cmodels;          // = &map_cmodel_empty;
+	cmodel_t *map_cmodels;          // = &map_cmodel_empty; instance-local (is not shared)
 	vec3_t world_mins, world_maxs;
 
 	int numbrushes;
-	cbrush_t *map_brushes;
+	cbrush_t *map_brushes;          // instance-local (is not shared)
 
 	int numfaces;
-	cface_t *map_faces;
+	cface_t *map_faces;             // instance-local (is not shared)
+
+	uint8_t **map_face_brushdata;   // shared between instances contrary to map_faces to avoid duplication for no reasons.
 
 	int nummarkfaces;
-	cface_t **map_markfaces;
+	cface_t **map_markfaces;        // instance-local (is not shared)
 
 	vec3_t *map_verts;              // this will be freed
 	int numvertexes;

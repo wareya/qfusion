@@ -25,38 +25,47 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "snd_local.h"
 
+static bool alinit_fail = false;
+static bool efx_init_fail = false;
+static bool hrtf_init_fail = false;
+
+LPALGENEFFECTS qalGenEffects;
+LPALDELETEEFFECTS qalDeleteEffects;
+LPALISEFFECT qalIsEffect;
+LPALEFFECTI qalEffecti;
+LPALEFFECTIV qalEffectiv;
+LPALEFFECTF qalEffectf;
+LPALEFFECTFV qalEffectfv;
+LPALGETEFFECTI qalGetEffecti;
+LPALGETEFFECTIV qalGetEffeciv;
+LPALGETEFFECTF qalGetEffectf;
+LPALGETEFFECTFV qalGetEffectfv;
+
+LPALGENFILTERS qalGenFilters;
+LPALDELETEFILTERS qalDeleteFilters;
+LPALISFILTER qalIsFilter;
+LPALFILTERI qalFilteri;
+LPALFILTERIV qalFilteriv;
+LPALFILTERF qalFilterf;
+LPALFILTERFV qalFilterfv;
+LPALGETFILTERI qalGetFilteri;
+LPALGETFILTERIV qalGetFilteriv;
+LPALGETFILTERF qalGetFilterf;
+LPALGETFILTERFV qalGetFilterfv;
+
+LPALGENAUXILIARYEFFECTSLOTS qalGenAuxiliaryEffectSlots;
+LPALDELETEAUXILIARYEFFECTSLOTS qalDeleteAuxiliaryEffectSlots;
+LPALISAUXILIARYEFFECTSLOT qalIsAuxiliaryEffectSlot;
+LPALAUXILIARYEFFECTSLOTI qalAuxiliaryEffectSloti;
+LPALAUXILIARYEFFECTSLOTIV qalAuxiliaryEffectSlotiv;
+LPALAUXILIARYEFFECTSLOTF qalAuxiliaryEffectSlotf;
+LPALAUXILIARYEFFECTSLOTFV qalAuxiliaryEffectSlotfv;
+LPALGETAUXILIARYEFFECTSLOTI qalGetAuxiliaryEffectSloti;
+LPALGETAUXILIARYEFFECTSLOTIV qalGetAuxiliaryEffectSlotiv;
+LPALGETAUXILIARYEFFECTSLOTF qalGetAuxiliaryEffectSlotf;
+LPALGETAUXILIARYEFFECTSLOTFV qalGetAuxiliaryEffectSlotfv;
+
 #ifdef OPENAL_RUNTIME
-
-/*#if USE_SDL_VIDEO
-#include "SDL.h"
-#include "SDL_loadso.h"
-#define OBJTYPE void *
-#define OBJLOAD(x) SDL_LoadObject(x)
-#define SYMLOAD(x,y) SDL_LoadFunction(x,y)
-#define OBJFREE(x) SDL_UnloadObject(x)*/
-
-#if defined _WIN32
-#include <windows.h>
-#define OBJTYPE HMODULE
-#define OBJLOAD( x ) LoadLibrary( x )
-#define SYMLOAD( x, y ) GetProcAddress( x, y )
-#define OBJFREE( x ) FreeLibrary( x )
-
-#elif defined __linux__ || defined __FreeBSD__ || defined __MACOSX__ || defined __sun
-#include <dlfcn.h>
-#define OBJTYPE void *
-#define OBJLOAD( x ) dlopen( x, RTLD_LAZY | RTLD_GLOBAL )
-#define SYMLOAD( x, y ) dlsym( x, y )
-#define OBJFREE( x ) dlclose( x )
-#else
-
-#error "No lib loading code defined for platform."
-#endif
-
-#if defined __linux__ || defined __FreeBSD__ || defined __MACOSX__
-#include <unistd.h>
-#include <sys/types.h>
-#endif
 
 LPALENABLE qalEnable;
 LPALDISABLE qalDisable;
@@ -89,6 +98,7 @@ LPALSOURCEF qalSourcef;
 LPALSOURCE3F qalSource3f;
 LPALSOURCEFV qalSourcefv;
 LPALSOURCEI qalSourcei;
+LPALSOURCE3I qalSource3i;
 LPALGETSOURCEF qalGetSourcef;
 LPALGETSOURCE3F qalGetSource3f;
 LPALGETSOURCEFV qalGetSourcefv;
@@ -130,9 +140,38 @@ LPALCGETENUMVALUE qalcGetEnumValue;
 LPALCGETSTRING qalcGetString;
 LPALCGETINTEGERV qalcGetIntegerv;
 
-static OBJTYPE OpenALLib = NULL;
+/*#if USE_SDL_VIDEO
+#include "SDL.h"
+#include "SDL_loadso.h"
+#define OBJTYPE void *
+#define OBJLOAD(x) SDL_LoadObject(x)
+#define SYMLOAD(x,y) SDL_LoadFunction(x,y)
+#define OBJFREE(x) SDL_UnloadObject(x)*/
 
-static bool alinit_fail = false;
+#if defined _WIN32
+#include <windows.h>
+#define OBJTYPE HMODULE
+#define OBJLOAD( x ) LoadLibrary( x )
+#define SYMLOAD( x, y ) GetProcAddress( x, y )
+#define OBJFREE( x ) FreeLibrary( x )
+
+#elif defined __linux__ || defined __FreeBSD__ || defined __MACOSX__ || defined __sun
+#include <dlfcn.h>
+#define OBJTYPE void *
+#define OBJLOAD( x ) dlopen( x, RTLD_LAZY | RTLD_GLOBAL )
+#define SYMLOAD( x, y ) dlsym( x, y )
+#define OBJFREE( x ) dlclose( x )
+#else
+
+#error "No lib loading code defined for platform."
+#endif
+
+#if defined __linux__ || defined __FreeBSD__ || defined __MACOSX__
+#include <unistd.h>
+#include <sys/types.h>
+#endif
+
+static OBJTYPE OpenALLib = NULL;
 
 /*
 * GPA
@@ -149,6 +188,107 @@ static void *GPA( char *str ) {
 		//Com_DPrintf( " Loaded symbol: %s (0x%08X)\n", str, rv);
 		return rv;
 	}
+}
+
+static void QAL_EFX_Init() {
+	bool old_alinit_fail = alinit_fail;
+	alinit_fail = false;
+
+	qalGenEffects = GPA( "alGenEffects" );
+	qalDeleteEffects = GPA( "alDeleteEffects" );
+	qalIsEffect = GPA( "alIsEffect" );
+	qalEffecti = GPA( "alEffecti" );
+	qalEffectiv = GPA( "alEffectiv" );
+	qalEffectf = GPA( "alEffectf" );
+	qalEffectfv = GPA( "alEffectfv" );
+	qalGetEffecti = GPA( "alGetEffecti" );
+	qalGetEffeciv = GPA( "alGetEffectiv" );
+	qalGetEffectf = GPA( "alGetEffectf" );
+	qalGetEffectfv = GPA( "alGetEffectfv" );
+
+	qalGenFilters = GPA( "alGenFilters" );
+	qalDeleteFilters = GPA( "alDeleteFilters" );
+	qalIsFilter = GPA( "alIsFilter" );
+	qalFilteri = GPA( "alFilteri" );
+	qalFilteriv = GPA( "alFilteriv" );
+	qalFilterf = GPA( "alFilterf" );
+	qalFilterfv = GPA( "alFilterfv" );
+	qalGetFilteri = GPA( "alGetFilteri" );
+	qalGetFilteriv = GPA( "alGetFilteriv" );
+	qalGetFilterf = GPA( "alGetFilterf" );
+	qalGetFilterfv = GPA( "alGetFilterfv" );
+
+	qalGenAuxiliaryEffectSlots = GPA( "alGenAuxiliaryEffectSlots" );
+	qalDeleteAuxiliaryEffectSlots = GPA( "alDeleteAuxiliaryEffectSlots" );
+	qalIsAuxiliaryEffectSlot = GPA( "alIsAuxiliaryEffectSlot" );
+	qalAuxiliaryEffectSloti = GPA( "alAuxiliaryEffectSloti" );
+	qalAuxiliaryEffectSlotiv = GPA( "alAuxiliaryEffectSlotiv" );
+	qalAuxiliaryEffectSlotf = GPA( "alAuxiliaryEffectSlotf" );
+	qalAuxiliaryEffectSlotfv = GPA( "alAuxiliaryEffectSlotfv" );
+	qalGetAuxiliaryEffectSloti = GPA( "alGetAuxiliaryEffectSloti" );
+	qalGetAuxiliaryEffectSlotiv = GPA( "alGetAuxiliaryEffectSlotiv" );
+	qalGetAuxiliaryEffectSlotf = GPA( "alGetAuxiliaryEffectSlotf" );
+	qalGetAuxiliaryEffectSlotfv = GPA( "alGetAuxiliaryEffectSlotfv" );
+
+	efx_init_fail = alinit_fail;
+	alinit_fail = old_alinit_fail;
+}
+
+static void QAL_EFX_Shutdown() {
+	qalGenEffects = NULL;
+	qalDeleteEffects = NULL;
+	qalIsEffect = NULL;
+	qalEffecti = NULL;
+	qalEffectiv = NULL;
+	qalEffectf = NULL;
+	qalEffectfv = NULL;
+	qalGetEffecti = NULL;
+	qalGetEffeciv = NULL;
+	qalGetEffectf = NULL;
+	qalGetEffectfv = NULL;
+
+	qalGenFilters = NULL;
+	qalDeleteFilters = NULL;
+	qalIsFilter = NULL;
+	qalFilteri = NULL;
+	qalFilteriv = NULL;
+	qalFilterf = NULL;
+	qalFilterfv = NULL;
+	qalGetFilteri = NULL;
+	qalGetFilteriv = NULL;
+	qalGetFilterf = NULL;
+	qalGetFilterfv = NULL;
+
+	qalGenAuxiliaryEffectSlots = NULL;
+	qalDeleteAuxiliaryEffectSlots = NULL;
+	qalIsAuxiliaryEffectSlot = NULL;
+	qalAuxiliaryEffectSloti = NULL;
+	qalAuxiliaryEffectSlotiv = NULL;
+	qalAuxiliaryEffectSlotf = NULL;
+	qalAuxiliaryEffectSlotfv = NULL;
+	qalGetAuxiliaryEffectSloti = NULL;
+	qalGetAuxiliaryEffectSlotiv = NULL;
+	qalGetAuxiliaryEffectSlotf = NULL;
+	qalGetAuxiliaryEffectSlotfv = NULL;
+
+	efx_init_fail = false;
+}
+
+static void QAL_HRTF_Init() {
+	bool old_alinit_fail = alinit_fail;
+	alinit_fail = false;
+
+	// Just test whether these symbols are present.
+	// http://kcat.strangesoft.net/openal-extensions/SOFT_HRTF.txt
+	GPA( "alcGetStringiSOFT" );
+	GPA( "alcResetDeviceSOFT" );
+
+	hrtf_init_fail = alinit_fail;
+	alinit_fail = old_alinit_fail;
+}
+
+static void QAL_HRTF_Shutdown() {
+	hrtf_init_fail = false;
 }
 
 /*
@@ -215,6 +355,7 @@ bool QAL_Init( const char *libname, bool verbose ) {
 	qalSource3f = GPA( "alSource3f" );
 	qalSourcefv = GPA( "alSourcefv" );
 	qalSourcei = GPA( "alSourcei" );
+	qalSource3i = GPA( "alSource3i" );
 	qalGetSourcef = GPA( "alGetSourcef" );
 	qalGetSource3f = GPA( "alGetSource3f" );
 	qalGetSourcefv = GPA( "alGetSourcefv" );
@@ -256,6 +397,9 @@ bool QAL_Init( const char *libname, bool verbose ) {
 	qalcGetString = GPA( "alcGetString" );
 	qalcGetIntegerv = GPA( "alcGetIntegerv" );
 
+	QAL_HRTF_Init();
+	QAL_EFX_Init();
+
 	if( alinit_fail ) {
 		QAL_Shutdown();
 		Com_Printf( " Error: One or more symbols not found.\n" );
@@ -273,6 +417,9 @@ void QAL_Shutdown( void ) {
 		OBJFREE( OpenALLib );
 		OpenALLib = NULL;
 	}
+
+	QAL_EFX_Shutdown();
+	QAL_HRTF_Shutdown();
 
 	qalEnable = NULL;
 	qalDisable = NULL;
@@ -346,10 +493,30 @@ void QAL_Shutdown( void ) {
 	qalcGetString = NULL;
 	qalcGetIntegerv = NULL;
 }
-#else
+
+#else // OPENAL_RUNTIME is not defined
+
 bool QAL_Init( const char *libname, bool verbose ) {
+	// We have decided to disable EFX on Android.
+	// Even if a third-party library supports these effects,
+	// and, furthermore, if there is a hardware support for these effects,
+	// there is no sufficient processing power for environment sampling.
+	efx_init_fail = true;
+	hrtf_init_fail = true;
 	return true;
 }
+
 void QAL_Shutdown( void ) {
+	efx_init_fail = false;
+	hrtf_init_fail = false;
 }
+
 #endif
+
+bool QAL_Is_EFX_ExtensionSupported() {
+	return !efx_init_fail;
+}
+
+bool QAL_Is_HRTF_ExtensionSupported() {
+	return !hrtf_init_fail;
+}

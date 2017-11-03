@@ -45,6 +45,11 @@ struct packet_s {
 #define RELAY_GLOBAL_DELAY      RELAY_MIN_DELAY
 #endif
 
+typedef struct fatvis_s {
+	vec_t *skyorg;
+	uint8_t pvs[MAX_MAP_LEAFS / 8];
+} fatvis_t;
+
 typedef struct client_entities_s {
 	unsigned num_entities;              // maxclients->integer*UPDATE_BACKUP*MAX_PACKET_ENTITIES
 	unsigned next_entities;             // next client_entity to use
@@ -71,6 +76,7 @@ struct relay_s {
 	bool reliable;
 
 	cmodel_state_t *cms;
+	fatvis_t fatvis;
 
 	ginfo_t gi;
 	int num_active_specs;

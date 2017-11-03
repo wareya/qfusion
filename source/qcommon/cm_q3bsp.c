@@ -268,6 +268,7 @@ static void CM_CreatePatch( cmodel_state_t *cms, cface_t *patch, cshaderref_t *s
 		uint8_t *fdata;
 
 		fdata = Mem_Alloc( cms->mempool, patch->numfacets * sizeof( cbrush_t ) + totalsides * ( sizeof( cbrushside_t ) + sizeof( cplane_t ) ) );
+		cms->map_face_brushdata[patch - cms->map_faces] = fdata;
 
 		patch->facets = ( cbrush_t * )fdata; fdata += patch->numfacets * sizeof( cbrush_t );
 		memcpy( patch->facets, facets, patch->numfacets * sizeof( cbrush_t ) );
@@ -466,12 +467,14 @@ static void CMod_LoadFaces( cmodel_state_t *cms, lump_t *l ) {
 	}
 
 	out = cms->map_faces = Mem_Alloc( cms->mempool, count * sizeof( *out ) );
+	cms->map_face_brushdata = Mem_Alloc( cms->mempool, count * sizeof( *cms->map_face_brushdata ) );
 	cms->numfaces = count;
 
 	for( i = 0; i < count; i++, in++, out++ ) {
 		out->contents = 0;
 		out->numfacets = 0;
 		out->facets = NULL;
+		cms->map_face_brushdata[i] = NULL;
 		if( LittleLong( in->facetype ) != FACETYPE_PATCH ) {
 			continue;
 		}
@@ -497,12 +500,14 @@ static void CMod_LoadFaces_RBSP( cmodel_state_t *cms, lump_t *l ) {
 	}
 
 	out = cms->map_faces = Mem_Alloc( cms->mempool, count * sizeof( *out ) );
+	cms->map_face_brushdata = Mem_Alloc( cms->mempool, count * sizeof( *cms->map_face_brushdata ) );
 	cms->numfaces = count;
 
 	for( i = 0; i < count; i++, in++, out++ ) {
 		out->contents = 0;
 		out->numfacets = 0;
 		out->facets = NULL;
+		cms->map_face_brushdata[0] = NULL;
 		if( LittleLong( in->facetype ) != FACETYPE_PATCH ) {
 			continue;
 		}

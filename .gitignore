@@ -9,6 +9,11 @@ source/ipch
 *.vcxproj.user
 *.suo
 
+# Ignore Jetbrains tools files
+**/.idea
+*.iml
+*.cbp
+
 # Ignore cmake generated files
 **/CMakeCache.txt
 **/CPackConfig.cmake

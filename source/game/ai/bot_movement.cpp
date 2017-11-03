@@ -1365,7 +1365,7 @@ inline void BotBaseMovementAction::Assert( bool condition, const char *message )
 #ifdef ENABLE_MOVEMENT_ASSERTIONS
 	if( !condition ) {
 		if( message ) {
-			AI_FailWith("BotBaseMovementAction::Assert()", "An assertion has failed\n", message );
+			AI_FailWith("BotBaseMovementAction::Assert()", "An assertion has failed: %s\n", message );
 		} else {
 			AI_FailWith("BotBaseMovementAction::Assert()", "An assertion has failed\n");
 		}
