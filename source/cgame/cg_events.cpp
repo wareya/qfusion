@@ -214,17 +214,17 @@ void CG_LaserBeamEffect( centity_t *cent ) {
 			sound = CG_MediaSfx( cgs.media.sfxLasergunWeakHum );
 		}
 
+		// TODO: What's the point of it since drawing an impact sprite
+		// shifted from an actually drawn beam impact point is all it does?
 		// trace the beam: for tracing we use the real beam origin
-		GS_TraceCurveLaserBeam( &trace, laserOrigin, laserAngles, laserPoint, cent->current.number, 0, _LaserImpact );
+		//GS_TraceCurveLaserBeam( &trace, laserOrigin, laserAngles, laserPoint, cent->current.number, 0, _LaserImpact );
 
 		// draw the beam: for drawing we use the weapon projection source (already handles the case of viewer entity)
 		if( !CG_PModel_GetProjectionSource( cent->current.number, &projectsource ) ) {
 			VectorCopy( laserOrigin, projectsource.origin );
 		}
 
-		if( subdivisions < CURVELASERBEAM_SUBDIVISIONS ) {
-			subdivisions = CURVELASERBEAM_SUBDIVISIONS;
-		}
+		clamp( subdivisions, CURVELASERBEAM_SUBDIVISIONS, MAX_CURVELASERBEAM_SUBDIVISIONS );
 
 		CG_KillPolyBeamsByTag( cent->current.number );
 
@@ -243,7 +243,9 @@ void CG_LaserBeamEffect( centity_t *cent ) {
 			AngleVectors( tmpangles, dir, NULL, NULL );
 			VectorMA( projectsource.origin, range * frac, dir, end );
 
-			GS_TraceLaserBeam( &trace, from, tmpangles, DistanceFast( from, end ), passthrough, 0, NULL );
+			GS_TraceLaserBeam( &trace, from, tmpangles, DistanceFast( from, end ), passthrough, 0, _LaserImpact );
+			// Hack to fill some gaps between segments still might be seen while doing a fast side-to-side beam movement
+			VectorMA( from, -0.2f, dir, from );
 			CG_LaserGunPolyBeam( from, trace.endpos, color, cent->current.number );
 			if( trace.fraction != 1.0f ) {
 				break;

@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cg_local.h"
 
-#define MAX_CGPOLYS                     800
+#define MAX_CGPOLYS                     ( 1024 + 512 )
 #define MAX_CGPOLY_VERTS                16
 
 typedef struct cpoly_s
@@ -293,6 +293,9 @@ void CG_LaserGunPolyBeam( const vec3_t start, const vec3_t end, const vec4_t col
 	vec_t total;
 	vec_t min;
 	vec4_t min_team_color;
+	vec_t *poly_color = NULL;
+	struct shader_s *shader;
+	cpoly_t *poly;
 
 	// learn0more: this kinda looks best
 	if( color ) {
@@ -304,9 +307,20 @@ void CG_LaserGunPolyBeam( const vec3_t start, const vec3_t end, const vec4_t col
 		if( total < min ) {
 			VectorCopy( min_team_color, tcolor );
 		}
+		poly_color = tcolor;
 	}
 
-	CG_SpawnPolyBeam( start, end, color ? tcolor : NULL, 12, 1, 0, CG_MediaShader( cgs.media.shaderLaserGunBeam ), 64, tag );
+	shader = CG_MediaShader( cgs.media.shaderLaserGunBeam );
+	CG_SpawnPolyBeam( start, end, poly_color, 12, 1, 0, shader, 64, tag );
+	// Draw another poly beam so its section has an X-shape
+	// This is required to fix segmented curved laser look
+	// Note: "autosprite" shader property MUST be removed from the beam shader,
+	// and the nullity check is important too
+	// (The polys pool used to get exhausted sometimes on high beam subdivisions value,
+	// and there is no guarantee it won't happen again).
+	if( ( poly = CG_SpawnPolyBeam( start, end, poly_color, 12, 1, 0, shader, 64, tag ) ) ) {
+		poly->angles[ROLL] += 90;
+	}
 }
 
 /*
