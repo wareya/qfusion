@@ -566,7 +566,6 @@ static edict_t *G_Fire_Lasergun( vec3_t origin, vec3_t angles, firedef_t *firede
 /*
 * G_Fire_WeakBolt
 */
-#if 0
 static edict_t *G_Fire_WeakBolt( vec3_t origin, vec3_t angles, firedef_t *firedef, edict_t *owner, int seed ) {
 	int speed, maxknockback, minknockback, stun, mod;
 	float maxdamage, mindamage;
@@ -596,17 +595,9 @@ static edict_t *G_Fire_WeakBolt( vec3_t origin, vec3_t angles, firedef_t *firede
 		maxdamage *= QUAD_DAMAGE_SCALE;
 		maxknockback *= QUAD_KNOCKBACK_SCALE;
 	}
-#ifdef ELECTROBOLT_TEST
-	W_Fire_Electrobolt_Combined( owner, origin, angles, maxdamage, mindamage,
-								 maxknockback, minknockback, stun, firedef->timeout, mod, timeDelta );
-
-	return NULL;
-#else
 	return W_Fire_Electrobolt_Weak( owner, origin, angles, speed, maxdamage, minknockback, maxknockback, stun,
 									firedef->timeout, mod, timeDelta );
-#endif
 }
-#endif
 
 /*
 * G_Fire_StrongBolt
@@ -646,6 +637,43 @@ static edict_t *G_Fire_StrongBolt( vec3_t origin, vec3_t angles, firedef_t *fire
 								 maxknockback, minknockback, stun, range, mod, timeDelta );
 #endif
 	return NULL;
+}
+
+/*
+* G_Fire_Shockwave
+*/
+static edict_t *G_Fire_Shockwave( vec3_t origin, vec3_t angles, firedef_t *firedef, edict_t *owner, int seed ) {
+	int speed, knockback, stun, minDamage, minKnockback, radius, mod;
+	float damage;
+	int timeDelta;
+
+	// FIXME2: Rockets go slower underwater, do this at the actual rocket firing function
+
+	timeDelta = 0;
+	if( owner && owner->r.client ) {
+		timeDelta = owner->r.client->timeDelta;
+	}
+
+	if( firedef->spread ) {
+		G_LocalSpread( angles, firedef->spread, seed );
+	}
+
+	mod = ( firedef->fire_mode == FIRE_MODE_STRONG ) ? MOD_SHOCKWAVE_S : MOD_SHOCKWAVE_W;
+	speed = firedef->speed;
+	damage = firedef->damage;
+	knockback = firedef->knockback;
+	stun = firedef->stun;
+	minDamage = firedef->mindamage;
+	minKnockback = firedef->minknockback;
+	radius = firedef->splash_radius;
+
+	if( is_quad ) {
+		damage *= QUAD_DAMAGE_SCALE;
+		knockback *= QUAD_KNOCKBACK_SCALE;
+	}
+
+	return W_Fire_Shockwave( owner, origin, angles, speed, damage, minKnockback, knockback, stun, minDamage,
+						  radius, firedef->timeout, mod, timeDelta );
 }
 
 /*
@@ -753,7 +781,15 @@ void G_FireWeapon( edict_t *ent, int parm ) {
 			break;
 
 		case WEAP_ELECTROBOLT:
-			projectile = G_Fire_StrongBolt( origin, angles, firedef, ent, ucmdSeed );
+			if( firedef->fire_mode == FIRE_MODE_STRONG ) {
+				projectile = G_Fire_StrongBolt( origin, angles, firedef, ent, ucmdSeed );
+			} else {
+				projectile = G_Fire_WeakBolt( origin, angles, firedef, ent, ucmdSeed );
+			}
+			break;
+
+		case WEAP_SHOCKWAVE:
+			projectile = G_Fire_Shockwave( origin, angles, firedef, ent, ucmdSeed );
 			break;
 
 		case WEAP_INSTAGUN:

@@ -1870,6 +1870,7 @@ void CG_AddEntities( void ) {
 				CG_AddGenericEnt( cent );
 				CG_EntityLoopSound( state, ATTN_STATIC );
 				CG_ElectroWeakTrail( cent->trailOrigin, cent->ent.origin, NULL );
+				CG_AddLightToScene( cent->ent.origin, 100, 0.9f, 0.9f, 1.0f );
 				break;
 			case ET_ROCKET:
 				CG_AddGenericEnt( cent );
@@ -1886,6 +1887,19 @@ void CG_AddEntities( void ) {
 			case ET_PLASMA:
 				CG_AddGenericEnt( cent );
 				CG_EntityLoopSound( state, ATTN_STATIC );
+				break;
+			case ET_WAVE:
+				CG_AddGenericEnt( cent );
+				CG_EntityLoopSound( state, ATTN_STATIC );
+				CG_WaveCoronaAndTrail( cent, cent->ent.origin );
+				// Add the core light
+				CG_AddLightToScene( cent->ent.origin, 150, 0.0f, 0.3f, 1.0f );
+				// Add the corona light
+				// We have initially thought to activate corona light only when corona damage is enabled,
+				// but it is not a good idea since it requires synchronization/prediction
+				// and the projectile gets activated rather fast anyway.
+				// Otherwise high ping players would only see an activated wave.
+				CG_AddLightToScene( cent->ent.origin, 450, 1.0f, 1.0f, 1.0f );
 				break;
 
 			case ET_SPRITE:
@@ -2022,6 +2036,7 @@ void CG_LerpEntities( void ) {
 			case ET_ROCKET:
 			case ET_PLASMA:
 			case ET_GRENADE:
+			case ET_WAVE:
 			case ET_ITEM:
 			case ET_PLAYER:
 			case ET_CORPSE:
@@ -2128,6 +2143,7 @@ void CG_UpdateEntities( void ) {
 			case ET_ROCKET:
 			case ET_PLASMA:
 			case ET_GRENADE:
+			case ET_WAVE:
 				cent->renderfx |= ( RF_NOSHADOW | RF_FULLBRIGHT );
 				CG_UpdateGenericEnt( cent );
 				break;

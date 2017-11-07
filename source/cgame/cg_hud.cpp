@@ -115,6 +115,7 @@ static const constant_numeric_t cg_numeric_constants[] = {
 	{ "WEAP_PLASMAGUN", WEAP_PLASMAGUN },
 	{ "WEAP_LASERGUN", WEAP_LASERGUN },
 	{ "WEAP_ELECTROBOLT", WEAP_ELECTROBOLT },
+	{ "WEAP_SHOCKWAVE", WEAP_SHOCKWAVE },
 	{ "WEAP_INSTAGUN", WEAP_INSTAGUN },
 
 	{ "NOGUN", 0 },
@@ -998,6 +999,14 @@ static void CG_DrawObituaries( int x, int y, int align, struct qfontface_s *font
 			case MOD_ELECTROBOLT_W:
 			case MOD_ELECTROBOLT_S:
 				pic = CG_MediaShader( cgs.media.shaderWeaponIcon[WEAP_ELECTROBOLT - 1] );
+				break;
+			case MOD_SHOCKWAVE_W:
+			case MOD_SHOCKWAVE_S:
+			case MOD_SHOCKWAVE_SPLASH_W:
+			case MOD_SHOCKWAVE_SPLASH_S:
+			case MOD_SHOCKWAVE_CORONA_W:
+			case MOD_SHOCKWAVE_CORONA_S:
+				pic = CG_MediaShader( cgs.media.shaderWeaponIcon[WEAP_SHOCKWAVE - 1] );
 				break;
 			case MOD_INSTAGUN_W:
 			case MOD_INSTAGUN_S:

@@ -98,7 +98,7 @@ gsitem_t itemdefs[] =
 		IT_WEAPON,
 		ITFLAG_PICKABLE | ITFLAG_USABLE | ITFLAG_DROPABLE | ITFLAG_STAY_COOP,
 
-		{ PATH_MACHINEGUN_MODEL, PATH_MACHINEGUN_BARREL_MODEL },
+		{ PATH_MACHINEGUN_MODEL, 0 },
 		PATH_MACHINEGUN_ICON,
 		PATH_MACHINEGUN_SIMPLEITEM,
 		S_PICKUP_WEAPON,
@@ -142,7 +142,7 @@ gsitem_t itemdefs[] =
 		IT_WEAPON,
 		ITFLAG_PICKABLE | ITFLAG_USABLE | ITFLAG_DROPABLE | ITFLAG_STAY_COOP,
 
-		{ PATH_GRENADELAUNCHER_MODEL, PATH_GRENADELAUNCHER_BARREL_MODEL },
+		{ PATH_GRENADELAUNCHER_MODEL, 0 },
 		PATH_GRENADELAUNCHER_ICON,
 		PATH_GRENADELAUNCHER_SIMPLEITEM,
 		S_PICKUP_WEAPON,
@@ -252,8 +252,31 @@ gsitem_t itemdefs[] =
 		AMMO_BOLTS,
 		AMMO_WEAK_BOLTS,
 		NULL,
-		/*PATH_ELECTROBOLT_WEAK_MODEL*/ NULL,
+		PATH_ELECTROBOLT_WEAK_MODEL,
 		S_WEAPON_ELECTROBOLT_HIT,
+		NULL
+	},
+
+	//QUAKED shockwave
+	{
+		"weapon_shockwave",
+		WEAP_SHOCKWAVE,
+		IT_WEAPON,
+		ITFLAG_PICKABLE | ITFLAG_USABLE | ITFLAG_DROPABLE | ITFLAG_STAY_COOP,
+
+		{ PATH_SHOCKWAVE_MODEL, PATH_SHOCKWAVE_BARREL_MODEL },
+		PATH_SHOCKWAVE_ICON,
+		PATH_SHOCKWAVE_SIMPLEITEM,
+		S_PICKUP_WEAPON,
+		EF_ROTATE_AND_BOB | EF_OUTLINE,
+
+		"Shockwave", "SW", S_COLOR_WHITE,
+		1,
+		1,
+		AMMO_WAVES,
+		AMMO_WEAK_WAVES,
+		NULL,
+		NULL,
 		NULL
 	},
 
@@ -463,6 +486,27 @@ gsitem_t itemdefs[] =
 	},
 
 	{
+		"ammo_shockwave",
+		AMMO_WAVES,
+		IT_AMMO,
+		ITFLAG_PICKABLE | ITFLAG_DROPABLE,
+
+		{ PATH_AMMO_BOX_MODEL, PATH_AMMO_BOX_MODEL2 },
+		PATH_INSTAGUN_AMMO_ICON,
+		PATH_INSTAGUN_AMMO_ICON,
+		S_PICKUP_AMMO,
+		EF_ROTATE_AND_BOB | EF_OUTLINE | EF_AMMOBOX,
+
+		"Waves", "waves", S_COLOR_WHITE,
+		0, // actual value comes from weapondefs instead
+		0, // actual value comes from weapondefs instead
+		AMMO_NONE,
+		AMMO_NONE,
+		NULL,
+		NULL, NULL, NULL
+	},
+
+	{
 		"ammo_instagun",
 		AMMO_INSTAS,
 		IT_AMMO,
@@ -655,6 +699,27 @@ gsitem_t itemdefs[] =
 		0,
 
 		"Weak Bolts", "weak bolts", NULL,
+		0, // actual value comes from weapondefs instead
+		0, // actual value comes from weapondefs instead
+		AMMO_NONE,
+		AMMO_NONE,
+		NULL,
+		NULL, NULL, NULL
+	},
+
+	{
+		"ammo_shockwave_weak",
+		AMMO_WEAK_WAVES,
+		IT_AMMO,
+		0,
+
+		{ 0, 0 },
+		NULL,
+		NULL,
+		NULL,
+		0,
+
+		"Weak Waves", "weak waves", NULL,
 		0, // actual value comes from weapondefs instead
 		0, // actual value comes from weapondefs instead
 		AMMO_NONE,

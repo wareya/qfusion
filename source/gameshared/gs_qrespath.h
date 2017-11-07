@@ -55,6 +55,7 @@ extern "C" {
 #define PATH_ROCKETLAUNCHER_ICON    "gfx/hud/icons/weapon/rocket"
 #define PATH_PLASMAGUN_ICON     "gfx/hud/icons/weapon/plasma"
 #define PATH_ELECTROBOLT_ICON       "gfx/hud/icons/weapon/electro"
+#define PATH_SHOCKWAVE_ICON      "gfx/hud/icons/weapon/shockwave"
 #define PATH_LASERGUN_ICON      "gfx/hud/icons/weapon/laser"
 #define PATH_INSTAGUN_ICON  "gfx/hud/icons/weapon/instagun"
 
@@ -66,6 +67,7 @@ extern "C" {
 #define PATH_ROCKETLAUNCHER_AMMO_ICON   "gfx/hud/icons/ammo/rocketammo"
 #define PATH_PLASMAGUN_AMMO_ICON    "gfx/hud/icons/ammo/plasmaammo"
 #define PATH_ELECTROBOLT_AMMO_ICON  "gfx/hud/icons/ammo/electroammo"
+#define PATH_SHOCKWAVE_AMMO_ICON    "gfx/hud/icons/ammo/shockwave"
 #define PATH_LASERGUN_AMMO_ICON     "gfx/hud/icons/ammo/laserammo"
 #define PATH_INSTAGUN_AMMO_ICON     "gfx/hud/icons/ammo/instaammo"
 
@@ -79,6 +81,7 @@ extern "C" {
 #define PATH_NG_ROCKETLAUNCHER_ICON "gfx/hud/icons/weapon/nogun_rocket"
 #define PATH_NG_PLASMAGUN_ICON      "gfx/hud/icons/weapon/nogun_plasma"
 #define PATH_NG_ELECTROBOLT_ICON    "gfx/hud/icons/weapon/nogun_electro"
+#define PATH_NG_SHOCKWAVE_ICON     "gfx/hud/icons/weapon/nogun_shockwave"
 #define PATH_NG_LASERGUN_ICON       "gfx/hud/icons/weapon/nogun_laser"
 #define PATH_NG_INSTAGUN_ICON       "gfx/hud/icons/weapon/nogun_instagun"
 
@@ -110,6 +113,9 @@ extern "C" {
 #define PATH_ROCKET_EXPLOSION_SPRITE    "gfx/rocket_explosion"
 #define PATH_ROCKET_EXPLOSION_RING_SPRITE   "gfx/misc/rlexplo_ring"
 
+#define PATH_WAVE_EXPLOSION_SPRITE     "gfx/shockwave_explosion"
+#define PATH_WAVE_EXPLOSION_RING_SPRITE "gfx/misc/shockwave_explosion_ring"
+
 // simpleitems
 
 #define PATH_MACHINEGUN_SIMPLEITEM      "gfx/simpleitems/weapon/machinegun"
@@ -119,6 +125,7 @@ extern "C" {
 #define PATH_PLASMAGUN_SIMPLEITEM       "gfx/simpleitems/weapon/plasma"
 #define PATH_LASERGUN_SIMPLEITEM        "gfx/simpleitems/weapon/laser"
 #define PATH_ELECTROBOLT_SIMPLEITEM     "gfx/simpleitems/weapon/electro"
+#define PATH_SHOCKWAVE_SIMPLEITEM       "gfx/simpleitems/weapon/shockwave"
 #define PATH_INSTAGUN_SIMPLEITEM        "gfx/simpleitems/weapon/instagun"
 #define PATH_AMMOPACK_SIMPLEITEM        "gfx/simpleitems/ammo/pack"
 #define PATH_GA_SIMPLEITEM          "gfx/simpleitems/armor/ga"
@@ -162,14 +169,14 @@ extern "C" {
 
 // weapons
 #define PATH_GUNBLADE_MODEL     "models/weapons/gunblade/gunblade.md3"
-#define PATH_MACHINEGUN_MODEL       "models/weapons/machinegun/machinegun.iqm"
-#define PATH_MACHINEGUN_BARREL_MODEL        "models/weapons/machinegun/machinegun_barrel.iqm"
+#define PATH_MACHINEGUN_MODEL       "models/weapons/machinegun/machinegun.md3"
 #define PATH_RIOTGUN_MODEL      "models/weapons/riotgun/riotgun.md3"
-#define PATH_GRENADELAUNCHER_MODEL  "models/weapons/glauncher/glauncher.iqm"
-#define PATH_GRENADELAUNCHER_BARREL_MODEL   "models/weapons/glauncher/glauncher_barrel.iqm"
+#define PATH_GRENADELAUNCHER_MODEL  "models/weapons/glauncher/glauncher.md3"
 #define PATH_ROCKETLAUNCHER_MODEL   "models/weapons/rlauncher/rlauncher.md3"
 #define PATH_PLASMAGUN_MODEL        "models/weapons/plasmagun/plasmagun.md3"
-#define PATH_ELECTROBOLT_MODEL      "models/weapons/electrobolt/electrobolt.iqm"
+#define PATH_ELECTROBOLT_MODEL      "models/weapons/electrobolt/electrobolt.md3"
+#define PATH_SHOCKWAVE_MODEL      "models/weapons/shockwave/shockwave.md3"
+#define PATH_SHOCKWAVE_BARREL_MODEL "models/weapons/shockwave/shockwave_barrel.md3"
 #define PATH_LASERGUN_MODEL     "models/weapons/lasergun/lasergun.md3"
 #define PATH_INSTAGUN_MODEL     "models/weapons/instagun/instagun.md3"
 
@@ -213,6 +220,8 @@ extern "C" {
 #define PATH_ROCKET_WEAK_MODEL          "models/objects/projectile/rlauncher/rocket_strong.md3"
 #define PATH_ROCKET_STRONG_MODEL        "models/objects/projectile/rlauncher/rocket_strong.md3"
 #define PATH_ELECTROBOLT_WEAK_MODEL     "models/objects/projectile/electrobolt/proj_electrobolt.md3"
+#define PATH_WAVE_WEAK_MODEL            "models/objects/projectile/shockwave/proj_shockwave.md3"
+#define PATH_WAVE_STRONG_MODEL          "models/objects/projectile/shockwave/proj_shockwave.md3"
 
 #define PATH_BULLET_EXPLOSION_MODEL     "models/weapon_hits/bullet/hit_bullet.md3"
 #define PATH_GRENADE_EXPLOSION_MODEL        "models/weapon_hits/glauncher/hit_glauncher.md3"
@@ -384,6 +393,11 @@ extern "C" {
 #define S_WEAPON_LASERGUN_HIT_2         "sounds/weapons/laser_hit2"
 
 #define S_WEAPON_ELECTROBOLT_HIT        "sounds/weapons/electrobolt_hit"
+
+#define S_WEAPON_SHOCKWAVE_W_FLY       "sounds/weapons/shockwave_fly_strong"
+#define S_WEAPON_SHOCKWAVE_S_FLY       "sounds/weapons/shockwave_fly_strong"
+#define S_WEAPON_SHOCKWAVE_W_HIT       "sounds/weapons/shockwave_strong_explosion"
+#define S_WEAPON_SHOCKWAVE_S_HIT       "sounds/weapons/shockwave_strong_explosion"
 
 // announcer sounds
 // readyup

@@ -639,6 +639,52 @@ void CG_RocketExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, 
 }
 
 /*
+* CG_RocketExplosionMode
+*/
+void CG_WaveExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, float radius ) {
+	lentity_t *le;
+	vec3_t angles, vec;
+	vec3_t origin;
+	float expvelocity = 8.0f;
+
+	VecToAngles( dir, angles );
+
+	if( fire_mode == FIRE_MODE_STRONG ) {
+		CG_SpawnDecal( pos, dir, random() * 360, radius * 0.5, 1, 1, 1, 1, 10, 1, false, CG_MediaShader( cgs.media.shaderExplosionMark ) );
+	} else {
+		CG_SpawnDecal( pos, dir, random() * 360, radius * 0.25, 1, 1, 1, 1, 10, 1, false, CG_MediaShader( cgs.media.shaderExplosionMark ) );
+	}
+
+	VectorMA( pos, radius * 0.12f, dir, origin );
+	le = CG_AllocSprite( LE_INVERSESCALE_ALPHA_FADE, origin, radius * 0.5f, 3,
+						 1, 1, 1, 1,
+						 radius * 3, 1.0f, 1.0f, 1.0, // white dlight
+						 CG_MediaShader( cgs.media.shaderWaveExplosion ) );
+
+	VectorSet( vec, crandom() * expvelocity, crandom() * expvelocity, crandom() * expvelocity );
+	VectorScale( dir, expvelocity, le->velocity );
+	VectorAdd( le->velocity, vec, le->velocity );
+	le->ent.rotation = rand() % 360;
+
+	VectorMA( pos, radius * 0.20f, dir, origin );
+	le = CG_AllocSprite( LE_SCALE_ALPHA_FADE, origin, radius * 0.3f, 3,
+						 1, 1, 1, 1,
+						 0, 0, 0, 0, // no dlight
+						 CG_MediaShader( cgs.media.shaderWaveExplosionRing ) );
+
+	le->ent.rotation = rand() % 360;
+
+	// Explosion particles
+	CG_ParticleExplosionEffect( pos, dir, 0.9, 1.0, 1.0, 64, 0.0f );
+
+	if( fire_mode == FIRE_MODE_STRONG ) {
+		trap_S_StartFixedSound( CG_MediaSfx( cgs.media.sfxWaveStrongHit ), pos, CHAN_AUTO, cg_volume_effects->value, ATTN_DISTANT );
+	} else {
+		trap_S_StartFixedSound( CG_MediaSfx( cgs.media.sfxWaveWeakHit ), pos, CHAN_AUTO, cg_volume_effects->value, ATTN_DISTANT );
+	}
+}
+
+/*
 * CG_BladeImpact
 */
 void CG_BladeImpact( const vec3_t pos, const vec3_t dir ) {
@@ -852,6 +898,32 @@ void CG_ProjectileTrail( centity_t *cent ) {
 							 shader );
 		VectorSet( le->velocity, -vec[0] * 5 + crandom() * 5, -vec[1] * 5 + crandom() * 5, -vec[2] * 5 + crandom() * 5 + 3 );
 		le->ent.rotation = rand() % 360;
+	}
+}
+
+void CG_WaveCoronaAndTrail( centity_t *cent, const vec3_t org ) {
+	if( cent->localEffects[LOCALEFFECT_WAVECORONA_LAST_DROP] + 4 < cg.time ) {
+		cent->localEffects[LOCALEFFECT_WAVECORONA_LAST_DROP] = cg.time;
+		lentity_t *le;
+
+		le = CG_AllocSprite( LE_SCALE_ALPHA_FADE, org, 16, 4,
+							 1.0f, 1.0f, 1.0f, 0.1f,
+							 0, 0, 0, 0,
+							 CG_MediaShader( cgs.media.shaderWaveCorona ));
+
+		le->ent.rotation = rand() % 360;
+	}
+
+	if( cent->localEffects[LOCALEFFECT_WAVESPARK_LAST_DROP] + 8 < cg.time ) {
+		cent->localEffects[LOCALEFFECT_WAVESPARK_LAST_DROP] = cg.time;
+		for( int i = 0; i < 4; ++i ) {
+			CG_WaveSpark( org );
+		}
+	}
+
+	if( cent->localEffects[LOCALEFFECT_WAVETRAIL_LAST_DROP] + 16 < cg.time ) {
+		cent->localEffects[LOCALEFFECT_WAVETRAIL_LAST_DROP] = cg.time;
+		CG_ParticleEffect( org, vec3_origin, 1.0, 1.0, 1.0, 1, 0.0f );
 	}
 }
 

@@ -402,6 +402,7 @@ typedef enum {
 	WEAP_PLASMAGUN,
 	WEAP_LASERGUN,
 	WEAP_ELECTROBOLT,
+	WEAP_SHOCKWAVE,
 	WEAP_INSTAGUN,
 
 	WEAP_TOTAL
@@ -417,6 +418,7 @@ typedef enum {
 	AMMO_PLASMA,
 	AMMO_LASERS,
 	AMMO_BOLTS,
+	AMMO_WAVES,
 	AMMO_INSTAS,
 
 	AMMO_WEAK_GUNBLADE, //this is the blade
@@ -427,6 +429,7 @@ typedef enum {
 	AMMO_WEAK_PLASMA,
 	AMMO_WEAK_LASERS,
 	AMMO_WEAK_BOLTS,
+	AMMO_WEAK_WAVES,
 	AMMO_WEAK_INSTAS,
 
 	AMMO_TOTAL
@@ -760,6 +763,8 @@ typedef enum {
 	MOD_PLASMA_S,
 	MOD_ELECTROBOLT_W,
 	MOD_ELECTROBOLT_S,
+	MOD_SHOCKWAVE_W,
+	MOD_SHOCKWAVE_S,
 	MOD_INSTAGUN_W,
 	MOD_INSTAGUN_S,
 	MOD_LASERGUN_W,
@@ -770,6 +775,10 @@ typedef enum {
 	MOD_ROCKET_SPLASH_S,
 	MOD_PLASMA_SPLASH_W,
 	MOD_PLASMA_SPLASH_S,
+	MOD_SHOCKWAVE_SPLASH_W,  // explosion splash
+	MOD_SHOCKWAVE_SPLASH_S,
+	MOD_SHOCKWAVE_CORONA_W,  // flying projectile radius damage
+	MOD_SHOCKWAVE_CORONA_S,
 
 	// World damage
 	MOD_WATER,
@@ -920,6 +929,7 @@ typedef enum {
 	EV_ROCKET_EXPLOSION,
 	EV_PLASMA_EXPLOSION,
 	EV_BOLT_EXPLOSION,
+	EV_WAVE_EXPLOSION,
 	EV_INSTA_EXPLOSION,
 
 	// 3 spots reserved for new weapons sfx, so
@@ -994,6 +1004,7 @@ enum {
 	ET_ROCKET,      // redlight + trail
 	ET_GRENADE,
 	ET_PLASMA,
+	ET_WAVE,
 
 	ET_SPRITE,
 
@@ -1123,7 +1134,8 @@ trace_t *GS_TraceBullet( trace_t    *trace, vec3_t start, vec3_t dir, float r, f
 void GS_TraceLaserBeam( trace_t *trace, vec3_t origin, vec3_t angles, float range, int ignore, int timeDelta, void ( *impact )( trace_t *tr, vec3_t dir ) );
 void GS_TraceCurveLaserBeam( trace_t *trace, vec3_t origin, vec3_t angles, vec3_t blendPoint, int ignore, int timeDelta, void ( *impact )( trace_t *tr, vec3_t dir ) );
 
-#define CURVELASERBEAM_SUBDIVISIONS 6
+#define CURVELASERBEAM_SUBDIVISIONS ( 6 )
+#define MAX_CURVELASERBEAM_SUBDIVISIONS ( 24 )
 #define CURVELASERBEAM_BACKTIME     60
 #define LASERGUN_WEAK_TRAIL_BACKUP  32 // 0.5 second backup at 62 fps, which is the ucmd fps ratio
 #define LASERGUN_WEAK_TRAIL_MASK    ( LASERGUN_WEAK_TRAIL_BACKUP - 1 )

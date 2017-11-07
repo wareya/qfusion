@@ -601,13 +601,18 @@ static void CG_ClearParticles( void ) {
 *
 * Wall impact puffs
 */
-void CG_ParticleEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count ) {
+void CG_ParticleEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count, float gravity ) {
 	int j;
 	cparticle_t *p;
 	float d;
 
 	if( !cg_particles->integer ) {
 		return;
+	}
+
+	// Check for the default argument value
+	if( isnan( gravity ) ) {
+		gravity = -PARTICLE_GRAVITY;
 	}
 
 	if( cg_numparticles + count > MAX_PARTICLES ) {
@@ -623,7 +628,7 @@ void CG_ParticleEffect( const vec3_t org, const vec3_t dir, float r, float g, fl
 		}
 
 		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY;
+		p->accel[2] = gravity;
 		p->alphavel = -1.0 / ( 0.5 + random() * 0.3 );
 	}
 }
@@ -631,13 +636,18 @@ void CG_ParticleEffect( const vec3_t org, const vec3_t dir, float r, float g, fl
 /*
 * CG_ParticleEffect2
 */
-void CG_ParticleEffect2( const vec3_t org, const vec3_t dir, float r, float g, float b, int count ) {
+void CG_ParticleEffect2( const vec3_t org, const vec3_t dir, float r, float g, float b, int count, float gravity ) {
 	int j;
 	float d;
 	cparticle_t *p;
 
 	if( !cg_particles->integer ) {
 		return;
+	}
+
+	// Check for the default argument value
+	if( isnan( gravity ) ) {
+		gravity = -PARTICLE_GRAVITY;
 	}
 
 	if( cg_numparticles + count > MAX_PARTICLES ) {
@@ -653,7 +663,7 @@ void CG_ParticleEffect2( const vec3_t org, const vec3_t dir, float r, float g, f
 		}
 
 		p->accel[0] = p->accel[1] = 0;
-		p->accel[2] = -PARTICLE_GRAVITY;
+		p->accel[2] = gravity;
 		p->alphavel = -1.0 / ( 0.5 + random() * 0.3 );
 	}
 }
@@ -661,13 +671,18 @@ void CG_ParticleEffect2( const vec3_t org, const vec3_t dir, float r, float g, f
 /*
 * CG_ParticleExplosionEffect
 */
-void CG_ParticleExplosionEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count ) {
+void CG_ParticleExplosionEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count, float gravity ) {
 	int j;
 	cparticle_t *p;
 	float d;
 
 	if( !cg_particles->integer ) {
 		return;
+	}
+
+	// Check for the default argument value
+	if( isnan( gravity ) ) {
+		gravity = -PARTICLE_GRAVITY;
 	}
 
 	if( cg_numparticles + count > MAX_PARTICLES ) {
@@ -743,9 +758,12 @@ void CG_ElectroWeakTrail( const vec3_t start, const vec3_t end, const vec4_t col
 		VectorCopy( color, ucolor );
 	}
 
+	// Always draw projectile EB trail. Otherwise it is almost impossible to see the projectile.
+#if 0
 	if( !cg_particles->integer ) {
 		return;
 	}
+#endif
 
 	VectorCopy( start, move );
 	VectorSubtract( end, start, vec );

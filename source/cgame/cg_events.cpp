@@ -214,17 +214,17 @@ void CG_LaserBeamEffect( centity_t *cent ) {
 			sound = CG_MediaSfx( cgs.media.sfxLasergunWeakHum );
 		}
 
+		// TODO: What's the point of it since drawing an impact sprite
+		// shifted from an actually drawn beam impact point is all it does?
 		// trace the beam: for tracing we use the real beam origin
-		GS_TraceCurveLaserBeam( &trace, laserOrigin, laserAngles, laserPoint, cent->current.number, 0, _LaserImpact );
+		//GS_TraceCurveLaserBeam( &trace, laserOrigin, laserAngles, laserPoint, cent->current.number, 0, _LaserImpact );
 
 		// draw the beam: for drawing we use the weapon projection source (already handles the case of viewer entity)
 		if( !CG_PModel_GetProjectionSource( cent->current.number, &projectsource ) ) {
 			VectorCopy( laserOrigin, projectsource.origin );
 		}
 
-		if( subdivisions < CURVELASERBEAM_SUBDIVISIONS ) {
-			subdivisions = CURVELASERBEAM_SUBDIVISIONS;
-		}
+		clamp( subdivisions, CURVELASERBEAM_SUBDIVISIONS, MAX_CURVELASERBEAM_SUBDIVISIONS );
 
 		CG_KillPolyBeamsByTag( cent->current.number );
 
@@ -243,7 +243,9 @@ void CG_LaserBeamEffect( centity_t *cent ) {
 			AngleVectors( tmpangles, dir, NULL, NULL );
 			VectorMA( projectsource.origin, range * frac, dir, end );
 
-			GS_TraceLaserBeam( &trace, from, tmpangles, DistanceFast( from, end ), passthrough, 0, NULL );
+			GS_TraceLaserBeam( &trace, from, tmpangles, DistanceFast( from, end ), passthrough, 0, _LaserImpact );
+			// Hack to fill some gaps between segments still might be seen while doing a fast side-to-side beam movement
+			VectorMA( from, -0.2f, dir, from );
 			CG_LaserGunPolyBeam( from, trace.endpos, color, cent->current.number );
 			if( trace.fraction != 1.0f ) {
 				break;
@@ -346,7 +348,12 @@ static void CG_FireWeaponEvent( int entNum, int weapon, int fireMode ) {
 
 	if( sound ) {
 		if( ISVIEWERENTITY( entNum ) ) {
-			trap_S_StartGlobalSound( sound, CHAN_MUZZLEFLASH, cg_volume_effects->value );
+			// Wsw: Hack for new LG and MG sounds (they interfere with hit beeps being too loud for a 1-st person)
+			if( weapon == WEAP_LASERGUN || weapon == WEAP_MACHINEGUN ) {
+				trap_S_StartGlobalSound( sound, CHAN_MUZZLEFLASH, 0.5f * cg_volume_effects->value );
+			} else {
+				trap_S_StartGlobalSound( sound, CHAN_MUZZLEFLASH, cg_volume_effects->value );
+			}
 		} else {
 			// fixed position is better for location, but the channels are used from worldspawn
 			// and openal runs out of channels quick on cheap cards. Relative sound uses per-entity channels.
@@ -1186,12 +1193,7 @@ void CG_EntityEvent( entity_state_t *ent, int ev, int parm, bool predicted ) {
 			if( predicted ) {
 				vec3_t origin;
 
-				if( ( weapon == WEAP_ELECTROBOLT
-#ifndef ELECTROBOLT_TEST
-					  && fireMode == FIRE_MODE_STRONG
-#endif
-					  )
-					|| weapon == WEAP_INSTAGUN ) {
+				if( ( weapon == WEAP_ELECTROBOLT && fireMode == FIRE_MODE_STRONG ) || weapon == WEAP_INSTAGUN ) {
 					VectorCopy( cg.predictedPlayerState.pmove.origin, origin );
 					origin[2] += cg.predictedPlayerState.viewheight;
 					AngleVectors( cg.predictedPlayerState.viewangles, dir, NULL, NULL );
@@ -1476,6 +1478,17 @@ void CG_EntityEvent( entity_state_t *ent, int ev, int parm, bool predicted ) {
 				CG_StartKickAnglesEffect( ent->origin, 135, ent->weapon * 8, 300 );
 			} else {
 				CG_StartKickAnglesEffect( ent->origin, 125, ent->weapon * 8, 275 );
+			}
+			break;
+
+		case EV_WAVE_EXPLOSION:
+			ByteToDir( parm, dir );
+			CG_WaveExplosionMode( ent->origin, dir, ent->firemode, (float)ent->weapon * 8.0f );
+
+			if( ent->firemode == FIRE_MODE_STRONG ) {
+				CG_StartKickAnglesEffect( ent->origin, 90, ent->weapon * 8, 200 );
+			} else {
+				CG_StartKickAnglesEffect( ent->origin, 90, ent->weapon * 8, 200 );
 			}
 			break;
 

@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cg_local.h"
 
-#define MAX_CGPOLYS                     800
+#define MAX_CGPOLYS                     ( 1024 + 512 )
 #define MAX_CGPOLY_VERTS                16
 
 typedef struct cpoly_s
@@ -293,6 +293,9 @@ void CG_LaserGunPolyBeam( const vec3_t start, const vec3_t end, const vec4_t col
 	vec_t total;
 	vec_t min;
 	vec4_t min_team_color;
+	vec_t *poly_color = NULL;
+	struct shader_s *shader;
+	cpoly_t *poly;
 
 	// learn0more: this kinda looks best
 	if( color ) {
@@ -304,9 +307,20 @@ void CG_LaserGunPolyBeam( const vec3_t start, const vec3_t end, const vec4_t col
 		if( total < min ) {
 			VectorCopy( min_team_color, tcolor );
 		}
+		poly_color = tcolor;
 	}
 
-	CG_SpawnPolyBeam( start, end, color ? tcolor : NULL, 12, 1, 0, CG_MediaShader( cgs.media.shaderLaserGunBeam ), 64, tag );
+	shader = CG_MediaShader( cgs.media.shaderLaserGunBeam );
+	CG_SpawnPolyBeam( start, end, poly_color, 12, 1, 0, shader, 64, tag );
+	// Draw another poly beam so its section has an X-shape
+	// This is required to fix segmented curved laser look
+	// Note: "autosprite" shader property MUST be removed from the beam shader,
+	// and the nullity check is important too
+	// (The polys pool used to get exhausted sometimes on high beam subdivisions value,
+	// and there is no guarantee it won't happen again).
+	if( ( poly = CG_SpawnPolyBeam( start, end, poly_color, 12, 1, 0, shader, 64, tag ) ) ) {
+		poly->angles[ROLL] += 90;
+	}
 }
 
 /*
@@ -386,6 +400,27 @@ void CG_InstaPolyBeam( const vec3_t start, const vec3_t end, int team ) {
 */
 void CG_PLink( const vec3_t start, const vec3_t end, const vec4_t color, int flags ) {
 	CG_SpawnPolyBeam( start, end, color, 4, 2000.0f, 0.0f, CG_MediaShader( cgs.media.shaderLaser ), 64, 0 );
+}
+
+void CG_WaveSpark( const vec3_t emitterOrigin ) {
+	vec3_t end;
+	float dirScale;
+
+	// First make a random direction
+	// TODO: Extract a function, a similar code is used in sound environment sampling (not in this branch yet)
+	float theta = (float)( ( M_PI * 2 ) * 0.999999 * random() );
+	float phi = (float)( M_PI * random() );
+	float sinTheta = sinf( theta );
+	float cosTheta = cosf( theta );
+	float sinPhi = sinf( phi );
+	float cosPhi = cosf( phi );
+
+	VectorSet( end, sinTheta * cosPhi, sinTheta * sinPhi, cosTheta );
+	dirScale = 5.0f + 20.0f * random();
+	VectorScale( end, dirScale, end );
+	VectorAdd( end, emitterOrigin, end );
+
+	CG_SpawnPolyBeam( emitterOrigin, end, NULL, 8, 64, 64, CG_MediaShader( cgs.media.shaderWaveSparks ), 0, 0 );
 }
 
 /*

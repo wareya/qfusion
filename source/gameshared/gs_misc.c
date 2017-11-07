@@ -296,6 +296,18 @@ void GS_Obituary( void *victim, int gender, void *attacker, int mod, char *messa
 			strcpy( message2, "'s plasmagun" );
 			break;
 
+		case MOD_SHOCKWAVE_W:
+		case MOD_SHOCKWAVE_S:
+		case MOD_SHOCKWAVE_SPLASH_W:
+		case MOD_SHOCKWAVE_SPLASH_S:
+		case MOD_SHOCKWAVE_CORONA_W:
+		case MOD_SHOCKWAVE_CORONA_S:
+			// Having a single message for all these death types is satisfactory,
+			// text obituaries are not shown by default anyway.
+			strcpy( message, "was shocked by" );
+			strcpy( message2, "'s shockwave" );
+			break;
+
 		default:
 			strcpy( message, "was fragged by" );
 			break;

@@ -55,6 +55,9 @@ enum {
 	, LOCALEFFECT_ROCKETTRAIL_LAST_DROP
 	, LOCALEFFECT_ROCKETFIRE_LAST_DROP
 	, LOCALEFFECT_GRENADETRAIL_LAST_DROP
+	, LOCALEFFECT_WAVECORONA_LAST_DROP
+	, LOCALEFFECT_WAVESPARK_LAST_DROP
+	, LOCALEFFECT_WAVETRAIL_LAST_DROP
 	, LOCALEFFECT_BLOODTRAIL_LAST_DROP
 	, LOCALEFFECT_FLAGTRAIL_LAST_DROP
 	, LOCALEFFECT_LASERBEAM
@@ -201,6 +204,10 @@ typedef struct {
 
 	cgs_media_handle_t *sfxElectroboltHit;
 
+	// Shockwave sounds
+	cgs_media_handle_t *sfxWaveWeakHit;
+	cgs_media_handle_t *sfxWaveStrongHit;
+
 	cgs_media_handle_t *sfxQuadFireSound;
 
 	// VSAY sounds
@@ -233,7 +240,9 @@ typedef struct {
 	cgs_media_handle_t *shaderParticle;
 	cgs_media_handle_t *shaderGrenadeExplosion;
 	cgs_media_handle_t *shaderRocketExplosion;
+	cgs_media_handle_t *shaderWaveExplosion;
 	cgs_media_handle_t *shaderRocketExplosionRing;
+	cgs_media_handle_t *shaderWaveExplosionRing;
 	cgs_media_handle_t *shaderBulletExplosion;
 	cgs_media_handle_t *shaderRaceGhostEffect;
 	cgs_media_handle_t *shaderWaterBubble;
@@ -286,6 +295,8 @@ typedef struct {
 	cgs_media_handle_t *shaderElectroBeamBAlpha;
 	cgs_media_handle_t *shaderElectroBeamBBeta;
 	cgs_media_handle_t *shaderElectroBeamRing;
+	cgs_media_handle_t *shaderWaveCorona;
+	cgs_media_handle_t *shaderWaveSparks;
 	cgs_media_handle_t *shaderInstaBeam;
 	cgs_media_handle_t *shaderLaserGunBeam;
 	cgs_media_handle_t *shaderElectroboltMark;
@@ -1056,6 +1067,7 @@ void CG_PlasmaExplosion( const vec3_t pos, const vec3_t dir, int fire_mode, floa
 void CG_GrenadeExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, float radius );
 void CG_GenericExplosion( const vec3_t pos, const vec3_t dir, int fire_mode, float radius );
 void CG_RocketExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, float radius );
+void CG_WaveExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, float radius );
 void CG_ElectroTrail2( const vec3_t start, const vec3_t end, int team );
 void CG_ImpactSmokePuff( const vec3_t origin, const vec3_t dir, float radius, float alpha, int time, int speed );
 void CG_BoltExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, int surfFlags );
@@ -1104,6 +1116,7 @@ void CG_LaserGunPolyBeam( const vec3_t start, const vec3_t end, const vec4_t col
 void CG_ElectroPolyBeam( const vec3_t start, const vec3_t end, int team );
 void CG_InstaPolyBeam( const vec3_t start, const vec3_t end, int team );
 void CG_PLink( const vec3_t start, const vec3_t end, const vec4_t color, int flags );
+void CG_WaveSpark( const vec3_t emitterOrigin );
 
 //
 // cg_effects.c
@@ -1124,14 +1137,15 @@ void CG_AddFragmentedDecal( vec3_t origin, vec3_t dir, float orient, float radiu
 							float r, float g, float b, float a, struct shader_s *shader );
 
 void CG_AddParticles( void );
-void CG_ParticleEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count );
-void CG_ParticleEffect2( const vec3_t org, const vec3_t dir, float r, float g, float b, int count );
-void CG_ParticleExplosionEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count );
+void CG_ParticleEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count, float gravity = NAN );
+void CG_ParticleEffect2( const vec3_t org, const vec3_t dir, float r, float g, float b, int count, float gravity = NAN );
+void CG_ParticleExplosionEffect( const vec3_t org, const vec3_t dir, float r, float g, float b, int count, float gravity = NAN );
 void CG_BlasterTrail( const vec3_t start, const vec3_t end );
 void CG_FlyEffect( centity_t *ent, const vec3_t origin );
 void CG_ElectroIonsTrail( const vec3_t start, const vec3_t end, const vec4_t color );
 void CG_ElectroIonsTrail2( const vec3_t start, const vec3_t end, const vec4_t color );
 void CG_ElectroWeakTrail( const vec3_t start, const vec3_t end, const vec4_t color );
+void CG_WaveCoronaAndTrail( centity_t *ent, const vec3_t org );
 void CG_ImpactPuffParticles( const vec3_t org, const vec3_t dir, int count, float scale, float r, float g, float b, float a, struct shader_s *shader );
 void CG_HighVelImpactPuffParticles( const vec3_t org, const vec3_t dir, int count, float scale, float r, float g, float b, float a, struct shader_s *shader );
 

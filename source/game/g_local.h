@@ -334,6 +334,11 @@ extern cvar_t *g_timelimit;
 
 extern cvar_t *g_projectile_touch_owner;
 extern cvar_t *g_projectile_prestep;
+
+extern cvar_t *g_shockwave_fly_stun_scale;
+extern cvar_t *g_shockwave_fly_damage_scale;
+extern cvar_t *g_shockwave_fly_knockback_scale;
+
 extern cvar_t *g_numbots;
 extern cvar_t *g_maxtimeouts;
 
@@ -821,6 +826,7 @@ edict_t *W_Fire_Rocket( edict_t *self, vec3_t start, vec3_t angles, int speed, f
 edict_t *W_Fire_Plasma( edict_t *self, vec3_t start, vec3_t angles, float damage, int minKnockback, int maxKnockback, int stun, int minDamage, int radius, int speed, int timeout, int mod, int timeDelta );
 void W_Fire_Electrobolt_FullInstant( edict_t *self, vec3_t start, vec3_t angles, float maxdamage, float mindamage, int maxknockback, int minknockback, int stun, int range, int minDamageRange, int mod, int timeDelta );
 void W_Fire_Electrobolt_Combined( edict_t *self, vec3_t start, vec3_t angles, float maxdamage, float mindamage, float maxknockback, float minknockback, int stun, int range, int mod, int timeDelta );
+edict_t *W_Fire_Shockwave( edict_t *self, vec3_t start, vec3_t angles, int speed, float damage, int minKnockback, int maxKnockback, int stun, int minDamage, int radius, int timeout, int mod, int timeDelta );
 edict_t *W_Fire_Electrobolt_Weak( edict_t *self, vec3_t start, vec3_t angles, float speed, float damage, int minKnockback, int maxKnockback, int stun, int timeout, int mod, int timeDelta );
 edict_t *W_Fire_Lasergun( edict_t *self, vec3_t start, vec3_t angles, float damage, int knockback, int stun, int timeout, int mod, int timeDelta );
 edict_t *W_Fire_Lasergun_Weak( edict_t *self, vec3_t start, vec3_t end, float damage, int knockback, int stun, int timeout, int mod, int timeDelta );
@@ -1062,8 +1068,6 @@ typedef struct {
 
 typedef struct {
 	int ebhit_count;
-	int directrocket_count;
-	int directgrenade_count;
 	int multifrag_timer;
 	int multifrag_count;
 	int frag_count;
@@ -1071,10 +1075,12 @@ typedef struct {
 	int accuracy_award;
 	int directrocket_award;
 	int directgrenade_award;
+	int directwave_award;
 	int multifrag_award;
 	int spree_award;
 	int gl_midair_award;
 	int rl_midair_award;
+	int sw_midair_award;
 
 	int uh_control_award;
 	int mh_control_award;

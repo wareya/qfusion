@@ -22,8 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "g_local.h"
 
 #define EBHIT_FOR_AWARD     3
-#define DIRECTROCKET_FOR_AWARD  3
-#define DIRECTGRENADE_FOR_AWARD 3
 #define MULTIKILL_INTERVAL  3000
 #define LB_TIMEOUT_FOR_COMBO    200
 #define GUNBLADE_TIMEOUT_FOR_COMBO  400
@@ -166,6 +164,10 @@ void G_AwardPlayerHit( edict_t *targ, edict_t *attacker, int mod ) {
 			}
 			flag = COMBO_FLAG( WEAP_ELECTROBOLT );
 			break;
+		case MOD_SHOCKWAVE_W:
+		case MOD_SHOCKWAVE_S:
+			flag = COMBO_FLAG( WEAP_SHOCKWAVE );
+			break;
 		case MOD_ROCKET_W:
 		case MOD_ROCKET_S:
 		case MOD_ROCKET_SPLASH_W:
@@ -302,42 +304,35 @@ void G_AwardPlayerKilled( edict_t *self, edict_t *inflictor, edict_t *attacker, 
 		return;
 	}
 
-	if( mod == MOD_ROCKET_W || mod == MOD_ROCKET_S ) {
-		// direct hit
-		attacker->r.client->resp.awardInfo.directrocket_count++;
-		if( attacker->r.client->resp.awardInfo.directrocket_count == DIRECTROCKET_FOR_AWARD ) {
-			attacker->r.client->resp.awardInfo.directrocket_count = 0;
-			attacker->r.client->resp.awardInfo.directrocket_award++;
-			G_PlayerAward( attacker, S_COLOR_BLUE "Direct Rocket Hit!" );
-		}
+	static const int strongMeansOfDeath[3] = { MOD_ROCKET_S, MOD_GRENADE_S, MOD_SHOCKWAVE_S };
+	static const int weakMeansOfDeath[3] = { MOD_ROCKET_W, MOD_GRENADE_W, MOD_SHOCKWAVE_W };
+	static const char *weaponNames[3] = { "Rocket", "Grenade", "Shockwave" };
 
-		// Midair
-		if( self->groundentity == NULL && !self->waterlevel ) {
-			// check for height to the ground
-			G_Trace( &trace, self->s.origin, self->r.mins, self->r.maxs, tv( self->s.origin[0], self->s.origin[1], self->s.origin[2] - 64 ), self, MASK_SOLID );
-			if( trace.fraction == 1.0f ) {
-				attacker->r.client->resp.awardInfo.rl_midair_award++;
-				G_PlayerAward( attacker, S_COLOR_BLUE "Air Rocket!" );
-			}
-		}
-	}
-	if( mod == MOD_GRENADE_W || mod == MOD_GRENADE_S ) {
-		// direct hit
-		attacker->r.client->resp.awardInfo.directgrenade_count++;
-		if( attacker->r.client->resp.awardInfo.directgrenade_count == DIRECTGRENADE_FOR_AWARD ) {
-			attacker->r.client->resp.awardInfo.directgrenade_count = 0;
-			attacker->r.client->resp.awardInfo.directgrenade_award++;
-			G_PlayerAward( attacker, S_COLOR_BLUE "Direct Grenade Hit!" );
-		}
+	award_info_t *awardInfo = &attacker->r.client->resp.awardInfo;
+	int *const directAwardCounts[3] = {
+		&awardInfo->directrocket_award, &awardInfo->directgrenade_award, &awardInfo->directwave_award
+	};
+	int *const midairAwardCounts[3] = {
+		&awardInfo->rl_midair_award, &awardInfo->gl_midair_award, &awardInfo->sw_midair_award
+	};
 
-		// Midair
-		if( self->groundentity == NULL && !self->waterlevel ) {
-			// check for height to the ground
-			G_Trace( &trace, self->s.origin, self->r.mins, self->r.maxs, tv( self->s.origin[0], self->s.origin[1], self->s.origin[2] - 64 ), self, MASK_SOLID );
-			if( trace.fraction == 1.0f ) {
-				attacker->r.client->resp.awardInfo.gl_midair_award++;
-				G_PlayerAward( attacker, S_COLOR_BLUE "Air Grenade!" );
+	for( int i = 0; i < 3; ++i ) {
+		if( mod == weakMeansOfDeath[i] || mod == strongMeansOfDeath[i] ) {
+			( *directAwardCounts[i] )++;
+			G_PlayerAward( attacker, va( S_COLOR_BLUE "Direct %s Hit!", weaponNames[i] ) );
+
+			// Midair
+			if( !self->groundentity && !self->waterlevel ) {
+				// check for height to the ground
+				float *groundPoint = tv( self->s.origin[1], self->s.origin[1], self->s.origin[2] - 64 );
+				G_Trace( &trace, self->s.origin, self->r.mins, self->r.maxs, groundPoint, self, MASK_SOLID );
+				if( trace.fraction == 1.0f ) {
+					( *midairAwardCounts[i] )++;
+					G_PlayerAward( attacker, va( S_COLOR_BLUE "Air %s!", weaponNames[i] ) );
+				}
 			}
+
+			break;
 		}
 	}
 
