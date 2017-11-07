@@ -33,7 +33,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifndef APP_VERSION_MINOR
-#define APP_VERSION_MINOR               1
+#define APP_VERSION_MINOR               2
 #endif
 
 #ifndef APP_VERSION_UPDATE
@@ -45,19 +45,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifdef PUBLIC_BUILD
-#define APP_PROTOCOL_VERSION            22
+#define APP_PROTOCOL_VERSION            23
 #else
-#define APP_PROTOCOL_VERSION            2200
+#define APP_PROTOCOL_VERSION            2300
 #endif
 
 #ifdef PUBLIC_BUILD
-#define APP_DEMO_PROTOCOL_VERSION       20
+#define APP_DEMO_PROTOCOL_VERSION       21
 #else
-#define APP_DEMO_PROTOCOL_VERSION       20
+#define APP_DEMO_PROTOCOL_VERSION       21
 #endif
 
 #ifndef APP_URL
-#define APP_URL                         "http://www.warsow.gg/"
+#define APP_URL                         "http://www.warsow.net/"
 #endif
 
 #ifndef APP_COPYRIGHT_OWNER
@@ -90,18 +90,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifndef APP_UPDATE_URL
-#define APP_UPDATE_URL                  "http://update.warsow.gg/"
+#define APP_UPDATE_URL                  "http://update.warsow.net/"
 #define APP_SERVER_UPDATE_DIRECTORY     "autoupdate/"STR_TOSTR ( APP_VERSION_MAJOR ) "." STR_TOSTR( APP_VERSION_MINOR ) "/"
 #define APP_SERVER_UPDATE_FILE          "filelist.txt"
 #define APP_CLIENT_UPDATE_FILE          "warsow_last_version.txt"
 #endif
 
 #ifdef PUBLIC_BUILD
-#define APP_MATCHMAKER_URL              "https://mm.warsow.gg:1338"
-#define APP_MATCHMAKER_WEB_URL          "https://www.warsow.gg/wmm/"
+#define APP_MATCHMAKER_URL              "https://mm.warsow.net:1338"
+#define APP_MATCHMAKER_WEB_URL          "https://www.warsow.net/wmm/"
 #else
-#define APP_MATCHMAKER_URL              "http://mm-dev.warsow.gg:1337"
-#define APP_MATCHMAKER_WEB_URL          "http://www-dev.warsow.gg/wmm/"
+#define APP_MATCHMAKER_URL              "http://mm-dev.warsow.net:1337"
+#define APP_MATCHMAKER_WEB_URL          "http://www-dev.warsow.net/wmm/"
 #endif
 
 #ifndef APP_UI_BASEPATH
