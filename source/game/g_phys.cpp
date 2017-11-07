@@ -782,7 +782,7 @@ static void SV_Physics_Toss( edict_t *ent ) {
 		if( ent->movetype == MOVETYPE_BOUNCE ) {
 			backoff = 1.5;
 		} else if( ent->movetype == MOVETYPE_BOUNCEGRENADE ) {
-			backoff = 1.5;
+			backoff = 1.4;
 		} else {
 			backoff = 1;
 		}
@@ -797,10 +797,7 @@ static void SV_Physics_Toss( edict_t *ent ) {
 			// LA: hopefully will fix grenades bouncing down slopes
 			// method taken from Darkplaces sourcecode
 			if( trace.allsolid ||
-				( ISWALKABLEPLANE( &trace.plane ) &&
-				  fabs( DotProduct( trace.plane.normal, ent->velocity ) ) < 40
-				)
-				) {
+				( ISWALKABLEPLANE( &trace.plane ) && fabsf( DotProduct( trace.plane.normal, ent->velocity ) ) < 60 ) ) {
 				ent->groundentity = &game.edicts[trace.ent];
 				ent->groundentity_linkcount = ent->groundentity->linkcount;
 				VectorClear( ent->velocity );
