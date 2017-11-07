@@ -117,25 +117,25 @@ uint64_t NavEntity::MaxWaitDuration() const {
 	const int itemTag = ent->item->tag;
 
 	if( itemType == IT_POWERUP ) {
-		return 9000;
+		return 5000;
 	}
 
 	if( itemType == IT_HEALTH && ( itemTag == HEALTH_MEGA || itemTag == HEALTH_ULTRA ) ) {
-		return 6000;
+		return 3000;
 	}
 
 	if( itemType == IT_ARMOR ) {
 		switch( itemTag ) {
 			case ARMOR_RA:
-				return 6000;
+				return 3000;
 			case ARMOR_YA:
-				return 5000;
+				return 2000;
 			case ARMOR_GA:
-				return 4000;
+				return 1500;
 		}
 	}
 
-	return 3000;
+	return 1000;
 }
 
 int64_t NavEntity::Timeout() const {
@@ -172,10 +172,11 @@ void NavEntitiesRegistry::Init() {
 }
 
 void NavEntitiesRegistry::Update() {
-	AiAasWorld *aasWorld = AiAasWorld::Instance();
+	const auto *aasWorld = AiAasWorld::Instance();
+	auto *navEntitiesRegistry = NavEntitiesRegistry::Instance();
 
-	FOREACH_NAVENT( navEnt )
-	{
+	for( auto it = navEntitiesRegistry->begin(), end = navEntitiesRegistry->end(); it != end; ++it ) {
+		NavEntity *navEnt = *it;
 		if( ( navEnt->flags & NavEntityFlags::MOVABLE ) != NavEntityFlags::NONE ) {
 			navEnt->aasAreaNum = aasWorld->FindAreaNum( navEnt->ent->s.origin );
 		}

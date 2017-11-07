@@ -196,17 +196,17 @@ inline unsigned From1UpToMax( unsigned maxValue, float ratio ) {
 	return 1 + From0UpToMax( maxValue - 1, ratio );
 }
 
-inline void SetPacked4uVec( const vec3_t vec, short *packed ) {
-	packed[0] = (short)( vec[0] / 4.0f );
-	packed[1] = (short)( vec[1] / 4.0f );
-	packed[2] = (short)( vec[2] / 4.0f );
+inline void SetPacked4uVec( const vec3_t vec, int16_t *packed ) {
+	packed[0] = (int16_t)( vec[0] / 4.0f );
+	packed[1] = (int16_t)( vec[1] / 4.0f );
+	packed[2] = (int16_t)( vec[2] / 4.0f );
 }
 
-inline void SetPacked4uVec( const Vec3 &vec, short *packed ) {
+inline void SetPacked4uVec( const Vec3 &vec, int16_t *packed ) {
 	SetPacked4uVec( vec.Data(), packed );
 }
 
-inline Vec3 GetUnpacked4uVec( const short *packed ) {
+inline Vec3 GetUnpacked4uVec( const int16_t *packed ) {
 	return Vec3( packed[0] * 4, packed[1] * 4, packed[2] * 4 );
 }
 
@@ -249,5 +249,34 @@ inline void SolidWorldTrace( trace_t *trace, const vec3_t from, const vec3_t to,
 	float *maxs_ = const_cast<float *>( maxs );
 	trap_CM_TransformedBoxTrace( trace, from_, to_, mins_, maxs_, nullptr, MASK_SOLID, nullptr, nullptr );
 }
+
+struct EntAndScore {
+	int entNum;
+	float score;
+	EntAndScore(): entNum( 0 ), score( 0.0f ) {}
+	EntAndScore( int entNum_, float score_ ) : entNum( entNum_ ), score( score_ ) {}
+	bool operator<( const EntAndScore &that ) const { return score > that.score; }
+};
+
+struct AreaAndScore {
+	int areaNum;
+	float score;
+	AreaAndScore(): areaNum( 0 ), score( 0.0f ) {}
+	AreaAndScore( int areaNum_, float score_ ) : areaNum( areaNum_ ), score( score_ ) {}
+	bool operator<( const AreaAndScore &that ) const { return score > that.score; }
+};
+
+template<typename T>
+class ArrayRange {
+	const T *begin_;
+	const T *end_;
+public:
+	ArrayRange( const T *basePtr, size_t size ) {
+		begin_ = basePtr;
+		end_ = basePtr + size;
+	}
+	const T *begin() const { return begin_; }
+	const T *end() const { return end_; }
+};
 
 #endif
