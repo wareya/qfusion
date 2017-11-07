@@ -686,7 +686,6 @@ edict_t *W_Fire_Grenade( edict_t *self, vec3_t start, vec3_t angles, int speed, 
 	grenade->think = W_Grenade_Explode;
 	grenade->classname = "grenade";
 	grenade->enemy = NULL;
-	VectorSet( grenade->avelocity, 300, 300, 300 );
 
 	if( mod == MOD_GRENADE_S ) {
 		grenade->s.modelindex = trap_ModelIndex( PATH_GRENADE_STRONG_MODEL );
