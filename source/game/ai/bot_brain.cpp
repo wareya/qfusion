@@ -394,10 +394,10 @@ void BotBrain::PrepareCurrWorldState( WorldState *worldState ) {
 		hasGoodFarRangeWeapons = true;
 	}
 	if( RocketsReadyToFireCount() || LasersReadyToFireCount() || PlasmasReadyToFireCount() ||
-		BulletsReadyToFireCount() || ShellsReadyToFireCount() || InstasReadyToFireCount() ) {
+		BulletsReadyToFireCount() || ShellsReadyToFireCount() || InstasReadyToFireCount() || WavesReadyToFireCount() ) {
 		hasGoodMiddleRangeWeapons = true;
 	}
-	if( RocketsReadyToFireCount() || PlasmasReadyToFireCount() || ShellsReadyToFireCount() ) {
+	if( RocketsReadyToFireCount() || PlasmasReadyToFireCount() || ShellsReadyToFireCount() || WavesReadyToFireCount() ) {
 		hasGoodCloseRangeWeapons = true;
 	}
 

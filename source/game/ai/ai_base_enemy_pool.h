@@ -69,6 +69,12 @@ struct WeaponAmmo<WEAP_ELECTROBOLT>{
 };
 
 template<>
+struct WeaponAmmo<WEAP_SHOCKWAVE>{
+	static constexpr int strongAmmoTag = AMMO_WAVES;
+	static constexpr int weakAmmoTag = AMMO_WEAK_WAVES;
+};
+
+template<>
 struct WeaponAmmo<WEAP_INSTAGUN>{
 	static constexpr int strongAmmoTag = AMMO_INSTAS;
 	static constexpr int weakAmmoTag = AMMO_WEAK_INSTAS;
@@ -163,6 +169,7 @@ public:
 	inline int BulletsReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_MACHINEGUN>(); }
 	inline int LasersReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_LASERGUN>(); }
 	inline int BoltsReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_ELECTROBOLT>(); }
+	inline int WavesReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_SHOCKWAVE>(); }
 	inline int InstasReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_INSTAGUN>(); }
 
 	inline int PendingWeapon() const {

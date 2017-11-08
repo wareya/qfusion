@@ -353,10 +353,20 @@ void BotFireTargetCache::AdjustPredictionAimTypeParams( const SelectedEnemies &s
 														const SelectedWeapons &selectedWeapons,
 														const GenericFireDef &fireDef,
 														AimParams *aimParams ) {
-	if( fireDef.IsBuiltin() && fireDef.WeaponNum() == WEAP_PLASMAGUN ) {
-		aimParams->suggestedBaseCoordError = 0.5f * GENERIC_PROJECTILE_COORD_AIM_ERROR * ( 1.0f - bot->ai->botRef->Skill() );
-	} else {
-		aimParams->suggestedBaseCoordError = GENERIC_PROJECTILE_COORD_AIM_ERROR;
+	aimParams->suggestedBaseCoordError = GENERIC_PROJECTILE_COORD_AIM_ERROR;
+	if( fireDef.IsBuiltin() ) {
+		switch( fireDef.WeaponNum() ) {
+			case WEAP_PLASMAGUN:
+				aimParams->suggestedBaseCoordError *= 0.5f * ( 1.0f - bot->ai->botRef->Skill() );
+				break;
+			case WEAP_ELECTROBOLT:
+				// Do not apply any error in this case (set it to some very low feasible value)
+				aimParams->suggestedBaseCoordError = 1.0f;
+				break;
+			default:
+				// Shut up an analyzer
+				break;
+		}
 	}
 
 	GetPredictedTargetOrigin( selectedEnemies, selectedWeapons, fireDef.ProjectileSpeed(), aimParams );

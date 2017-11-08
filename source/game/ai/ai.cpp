@@ -9,12 +9,12 @@ ai_weapon_aim_type BuiltinWeaponAimType( int builtinWeapon, int fireMode ) {
 	switch( builtinWeapon ) {
 		case WEAP_GUNBLADE:
 			// TODO: Introduce "melee" aim type for GB blade attack
+		case WEAP_ROCKETLAUNCHER:
 			return AI_WEAPON_AIM_TYPE_PREDICTION_EXPLOSIVE;
 		case WEAP_GRENADELAUNCHER:
 			return AI_WEAPON_AIM_TYPE_DROP;
-		case WEAP_ROCKETLAUNCHER:
-			return AI_WEAPON_AIM_TYPE_PREDICTION_EXPLOSIVE;
 		case WEAP_PLASMAGUN:
+		case WEAP_SHOCKWAVE:
 			return AI_WEAPON_AIM_TYPE_PREDICTION;
 		case WEAP_ELECTROBOLT:
 			return ( fireMode == FIRE_MODE_STRONG ) ? AI_WEAPON_AIM_TYPE_INSTANT_HIT : AI_WEAPON_AIM_TYPE_PREDICTION;
@@ -34,6 +34,8 @@ int BuiltinWeaponTier( int builtinWeapon ) {
 			return 3;
 		case WEAP_MACHINEGUN:
 		case WEAP_RIOTGUN:
+		// Bots can't use it properly
+		case WEAP_SHOCKWAVE:
 			return 2;
 		case WEAP_GRENADELAUNCHER:
 			return 1;
