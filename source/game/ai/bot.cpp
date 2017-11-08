@@ -448,8 +448,29 @@ void Bot::TouchedOtherEntity( const edict_t *entity ) {
 Vec3 Bot::GetNewViewAngles( const vec3_t oldAngles, const Vec3 &desiredDirection,
 							unsigned frameTime, float angularSpeedMultiplier ) const {
 	// A hack for evil hard bots aiming
-	if( GetSelectedEnemies().AreValid() && GetMiscTactics().shouldKeepXhairOnEnemy && Skill() > 0.33f ) {
+	if( self->ai->botRef->Skill() > 0.33f ) {
+		return Ai::GetNewViewAngles( oldAngles, desiredDirection, frameTime, angularSpeedMultiplier );
+	}
+
+	const auto &selectedEnemies = GetSelectedEnemies();
+	if( !selectedEnemies.AreValid() || !selectedEnemies.ArePotentiallyHittable() ) {
+		return Ai::GetNewViewAngles( oldAngles, desiredDirection, frameTime, angularSpeedMultiplier );
+	}
+
+	if( GetMiscTactics().shouldKeepXhairOnEnemy ) {
 		angularSpeedMultiplier *= 1.0f + 0.33f * ( Skill() - 0.33f );
+	}
+
+	// Another hack for shooting while falling
+	if( EntityPhysicsState()->IsHighAboveGround() ) {
+		// It is intended for crazy EB/RL/SW shots, not for aimbot LG tracking while falling
+		if( !IsBuiltinWeaponContinuousFire( self->r.client->ps.stats[STAT_WEAPON] ) ) {
+			const float oldPitchSpeed = angularViewSpeed[PITCH];
+			const_cast<float *>( angularViewSpeed )[PITCH] *= 1.33f;
+			Vec3 result( Ai::GetNewViewAngles( oldAngles, desiredDirection, frameTime, angularSpeedMultiplier ) );
+			const_cast<float *>( angularViewSpeed )[PITCH] = oldPitchSpeed;
+			return result;
+		}
 	}
 
 	return Ai::GetNewViewAngles( oldAngles, desiredDirection, frameTime, angularSpeedMultiplier );
