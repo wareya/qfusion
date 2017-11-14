@@ -3,6 +3,7 @@ project (game)
 include_directories(${ANGELSCRIPT_INCLUDE_DIR})
 
 file(GLOB GAME_HEADERS
+    "../qcommon/cjson.h"
     "*.h"
     "ai/*.h"
 	"../gameshared/*.h"
@@ -11,6 +12,7 @@ file(GLOB GAME_HEADERS
 )
 
 file(GLOB GAME_SOURCES
+    "../qcommon/cjson.c"
     "*.cpp"
     "ai/*.cpp"
     "../gameshared/*.c"

@@ -30,6 +30,13 @@ typedef struct edict_s edict_t;
 typedef struct gclient_s gclient_t;
 typedef struct gclient_quit_s gclient_quit_t;
 
+typedef struct wswcurl_req_s wswcurl_req;
+
+typedef void(*wswcurl_done_cb)(struct wswcurl_req_s *req, int status, void *customp);
+typedef size_t(*wswcurl_read_cb)(struct wswcurl_req_s *req, const void *buf, size_t numb,
+	float percentage, void *customp);
+typedef void(*wswcurl_header_cb)(struct wswcurl_req_s *req, const char *buf, void *customp);
+
 /*
 typedef struct stat_query_s stat_query_t;
 typedef struct stat_query_api_s stat_query_api_t;
@@ -186,6 +193,16 @@ typedef struct {
 	struct stat_query_api_s *( *GetStatQueryAPI )( void );
 	void ( *MM_SendQuery )( struct stat_query_s *query );
 	void ( *MM_GameState )( bool state );
+
+	wswcurl_req* (*CURL_Create)(const char *iface, const char *furl, ...);
+	void(*CURL_Delete)(wswcurl_req *req);
+	void(*CURL_Start)(wswcurl_req *req);
+	int(*CURL_Perform)(void);
+	void(*CURL_Cleanup)(void);
+	//size_t (*CURL_GetSize)( wswcurl_req *req, size_t *rxreceived);
+	void(*CURL_Stream_Callbacks)(wswcurl_req *req, wswcurl_read_cb read_cb, wswcurl_done_cb done_cb, wswcurl_header_cb header_cb, void *customp);
+	//size_t (*CURL_Read)( wswcurl_req *req, void *buffer, size_t size);
+	int(*CURL_FormAdd)(wswcurl_req *req, const char *fields, const char *value, ...);
 } game_import_t;
 
 //

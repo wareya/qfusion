@@ -552,6 +552,14 @@ void SV_InitGameProgs( void ) {
 	import.GetStatQueryAPI = PF_StatQuery_GetAPI;
 	import.MM_SendQuery = SV_MM_SendQuery;
 	import.MM_GameState = SV_MM_GameState;
+	
+	import.CURL_Create = wswcurl_create;
+	import.CURL_Delete = wswcurl_delete;
+	import.CURL_Perform = wswcurl_perform;
+	import.CURL_Cleanup = wswcurl_cleanup;
+	import.CURL_Start = wswcurl_start;
+	import.CURL_Stream_Callbacks = wswcurl_stream_callbacks;
+	import.CURL_FormAdd = wswcurl_formadd;
 
 	// clear module manifest string
 	assert( sizeof( manifest ) >= MAX_INFO_STRING );

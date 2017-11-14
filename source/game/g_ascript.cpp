@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 #include "g_as_local.h"
+#include "g_syncsow.h"
 
 angelwrap_api_t *angelExport = NULL;
 
@@ -3549,6 +3550,9 @@ static void G_InitializeGameModuleSyntax( asIScriptEngine *asEngine ) {
 
 	// register global properties
 	G_asRegisterGlobalProperties( asEngine, asGlobProps, "" );
+
+	// register CURL
+	RegisterCURLAddon( asEngine );
 }
 
 /*
@@ -3589,6 +3593,7 @@ void G_asInitGameModuleEngine( void ) {
 */
 void G_asShutdownGameModuleEngine( void ) {
 	if( game.asEngine != NULL ) {
+		Curl_Shutdown();
 		if( angelExport ) {
 			angelExport->asReleaseEngine( static_cast<asIScriptEngine *>( game.asEngine ) );
 		}

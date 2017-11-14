@@ -297,3 +297,38 @@ static inline void trap_MM_SendQuery( struct stat_query_s *query ) {
 static inline void trap_MM_GameState( bool state ) {
 	GAME_IMPORT.MM_GameState( state == true ? true : false );
 }
+
+static inline wswcurl_req *trap_CURL_Create(const char *iface, const char *furl, ...)
+{
+	return GAME_IMPORT.CURL_Create(iface, furl);
+}
+
+static inline void trap_CURL_Delete(wswcurl_req *req)
+{
+	GAME_IMPORT.CURL_Delete(req);
+}
+
+static inline int trap_CURL_Perform()
+{
+	return GAME_IMPORT.CURL_Perform();
+}
+
+static inline void trap_CURL_Cleanup()
+{
+	GAME_IMPORT.CURL_Cleanup();
+}
+
+static inline void trap_CURL_Start(wswcurl_req *req)
+{
+	GAME_IMPORT.CURL_Start(req);
+}
+
+static inline void trap_CURL_Stream_Callbacks(wswcurl_req *req, wswcurl_read_cb read_cb, wswcurl_done_cb done_cb, wswcurl_header_cb header_cb, void *customp)
+{
+	GAME_IMPORT.CURL_Stream_Callbacks(req, read_cb, done_cb, header_cb, customp);
+}
+
+static inline void trap_CURL_FormAdd(wswcurl_req *req, const char *fields, const char *value, ...)
+{
+	GAME_IMPORT.CURL_FormAdd(req, fields, value);
+}
