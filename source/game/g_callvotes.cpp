@@ -2420,7 +2420,7 @@ void G_RegisterGametypeScriptCallvote( const char *name, const char *usage, cons
 	}
 
 	vote = G_RegisterCallvote( name );
-	vote->expectedargs = 0;
+	vote->expectedargs = 1;
 	vote->validate = G_VoteFromScriptValidate;
 	vote->execute = G_VoteFromScriptPassed;
 	vote->current = NULL;
