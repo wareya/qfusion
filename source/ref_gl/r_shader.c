@@ -1717,7 +1717,8 @@ static void Shader_MakeCache( const char *filename ) {
 	assert( pathName );
 	Q_snprintfz( pathName, pathNameSize, "scripts/%s", filename );
 
-	Com_Printf( "...loading '%s'\n", pathName );
+	if ( r_showShaderCache && r_showShaderCache->integer )
+		Com_Printf( "...loading '%s'\n", pathName );
 
 	size = R_LoadFile( pathName, ( void ** )&temp );
 	if( !temp || size <= 0 ) {
@@ -1826,8 +1827,9 @@ static void R_InitShadersCache( void ) {
 	r_shaderTemplateBuf = NULL;
 
 	memset( shadercache_hash, 0, sizeof( shadercache_t * ) * SHADERCACHE_HASH_SIZE );
-
-	Com_Printf( "Initializing Shaders:\n" );
+	
+	if ( r_showShaderCache && r_showShaderCache->integer )
+		Com_Printf( "Initializing Shaders:\n" );
 
 	numfiles_total = 0;
 	for( d = 0; d < 3; d++ ) {
@@ -1866,7 +1868,10 @@ static void R_InitShadersCache( void ) {
 		ri.Com_Error( ERR_DROP, "Could not find any shaders!" );
 	}
 
-	Com_Printf( "--------------------------------------\n" );
+	if ( r_showShaderCache && r_showShaderCache->integer )
+		Com_Printf( "--------------------------------------\n" );
+	else
+		Com_Printf( "Shaders Initialized.\n" );
 }
 
 /*

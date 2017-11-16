@@ -131,6 +131,8 @@ cvar_t *gl_driver;
 cvar_t *gl_cull;
 cvar_t *r_multithreading;
 
+cvar_t *r_showShaderCache;
+
 static bool r_verbose;
 static bool r_postinit;
 
@@ -1172,6 +1174,8 @@ static void R_Register( const char *screenshotsPrefix ) {
 	r_maxglslbones = ri.Cvar_Get( "r_maxglslbones", STR_TOSTR( MAX_GLSL_UNIFORM_BONES ), CVAR_LATCH_VIDEO );
 
 	r_multithreading = ri.Cvar_Get( "r_multithreading", "1", CVAR_ARCHIVE | CVAR_LATCH_VIDEO );
+
+	r_showShaderCache = ri.Cvar_Get( "r_showShaderCache", "1", CVAR_ARCHIVE );
 
 	gl_cull = ri.Cvar_Get( "gl_cull", "1", 0 );
 	gl_drawbuffer = ri.Cvar_Get( "gl_drawbuffer", "GL_BACK", 0 );
