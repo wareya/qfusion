@@ -392,9 +392,39 @@ bool Bot::CheckShot( const AimParams &aimParams,
 			return false;
 		}
 
-		// Put very low restrictions on PG since spammy fire style is even adviced.
-		if( fireDef.IsBuiltin() && fireDef.WeaponNum() == WEAP_PLASMAGUN ) {
-			return toTargetDotLookDir > ( ( this->ShouldKeepXhairOnEnemy() ) ? 0.85f : 0.70f );
+		if( fireDef.IsBuiltin() ) {
+			// Put very low restrictions on PG since spammy fire style is even adviced.
+			if( fireDef.WeaponNum() == WEAP_PLASMAGUN ) {
+				return toTargetDotLookDir > ( ( this->ShouldKeepXhairOnEnemy() ) ? 0.85f : 0.70f );
+			}
+
+			if( fireDef.WeaponNum() == WEAP_SHOCKWAVE ) {
+				const float squareDistance = DistanceSquared( aimParams.fireOrigin, aimParams.fireTarget );
+				// Shockwave requires rather precise directional aiming on long range
+				if( squareDistance > 128.0f * 128.0f ) {
+					const float distanceFactor = BoundedFraction( SQRTFAST( squareDistance ), 1024.0f );
+					if( this->ShouldKeepXhairOnEnemy() ) {
+						return toTargetDotLookDir > 0.9f + 0.09f * distanceFactor;
+					}
+					return toTargetDotLookDir > 0.9f + 0.05f * distanceFactor;
+				}
+
+				float squareSplashThreshold = 0.75f * fireDef.SplashRadius();
+				squareSplashThreshold *= squareSplashThreshold;
+				return DistanceSquared( aimParams.fireTarget, tr.endpos ) < squareSplashThreshold;
+			}
+
+			// Projectile EB needs a special handling, otherwise bots miss a lot
+			if( fireDef.WeaponNum() == WEAP_ELECTROBOLT ) {
+				Vec3 absMins( aimParams.fireTarget );
+				Vec3 absMaxs( aimParams.fireTarget );
+				absMins += playerbox_stand_mins;
+				absMaxs += playerbox_stand_maxs;
+				// We use the minimal feasible radius, this is enough.
+				// The fire target is not intended to match actual origin
+				// as it as a result of interpolation/extrapolation + enemy movement prediction.
+				return BoundsAndSphereIntersect( absMins.Data(), absMaxs.Data(), tr.endpos, 1.0f );
+			}
 		}
 
 		return toTargetDotLookDir > ( ( this->ShouldKeepXhairOnEnemy() ) ? 0.95f : 0.90f );

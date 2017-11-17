@@ -1247,6 +1247,7 @@ protected:
 	bool stopPredictionOnTouchingPlatform;
 	bool stopPredictionOnTouchingNavEntity;
 	bool stopPredictionOnEnteringWater;
+	bool failPredictionOnEnteringDangerImpactZone;
 
 	inline BotBaseMovementAction &DummyAction();
 	inline BotBaseMovementAction &DefaultWalkAction();
@@ -1300,7 +1301,8 @@ public:
 		stopPredictionOnTouchingTeleporter( true ),
 		stopPredictionOnTouchingPlatform( true ),
 		stopPredictionOnTouchingNavEntity( true ),
-		stopPredictionOnEnteringWater( true ) {
+		stopPredictionOnEnteringWater( true ),
+		failPredictionOnEnteringDangerImpactZone( true ) {
 		RegisterSelf();
 	}
 	virtual void PlanPredictionStep( BotMovementPredictionContext *context ) = 0;
@@ -1437,12 +1439,12 @@ public:
 	}
 
 	inline void MarkAsVisited( int areaNum ) {
-		assert( (unsigned)areaNum < AiAasWorld::Instance()->NumAreas() );
+		assert( areaNum < AiAasWorld::Instance()->NumAreas() );
 		millisSinceLastVisited[areaNum] = 0;
 	}
 
 	inline unsigned MillisSinceLastVisited( int areaNum ) const {
-		assert( (unsigned)areaNum < AiAasWorld::Instance()->NumAreas() );
+		assert( areaNum < AiAasWorld::Instance()->NumAreas() );
 		return millisSinceLastVisited[areaNum];
 	}
 

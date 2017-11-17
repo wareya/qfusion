@@ -27,7 +27,7 @@ public:
 	GenericFireDef( int weaponNum_, const firedef_t *builtinFireDef ) {
 		this->projectileSpeed = builtinFireDef->speed;
 		this->splashRadius = builtinFireDef->splash_radius;
-		this->aimType = BuiltinWeaponAimType( weaponNum_ );
+		this->aimType = BuiltinWeaponAimType( weaponNum_, builtinFireDef->fire_mode );
 		this->weaponNum = (short)weaponNum_;
 		this->isBuiltin = true;
 	}
@@ -369,6 +369,7 @@ private:
 	inline int PlasmasReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_PLASMAGUN>(); }
 	inline int BulletsReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_MACHINEGUN>(); }
 	inline int LasersReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_LASERGUN>(); }
+	inline int WavesReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_SHOCKWAVE>(); }
 	inline int BoltsReadyToFireCount() const { return AmmoReadyToFireCount<WEAP_ELECTROBOLT>(); }
 
 	bool CheckFastWeaponSwitchAction( const WorldState &worldState );

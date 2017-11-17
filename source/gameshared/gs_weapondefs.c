@@ -711,7 +711,7 @@ gs_weapon_definition_t gs_weaponDefs[] =
 			1,                              // projectiles fired each shot
 
 			//timings (in msecs)
-			WEAPONUP_FRAMETIME,             // weapon up frametime
+			300,                            // weapon up frametime (a noticeable delay)
 			WEAPONDOWN_FRAMETIME,           // weapon down frametime
 			950,                            // reload frametime (same as RL)
 			0,                              // cooldown frametime
@@ -728,7 +728,7 @@ gs_weapon_definition_t gs_weaponDefs[] =
 			35,                             // minimum knockback
 
 			//projectile def
-			900,                            // speed (VQ3 rocket speed)
+			775,                            // speed
 			0,                              // spread
 			0,                              // v_spread
 
@@ -746,7 +746,7 @@ gs_weapon_definition_t gs_weaponDefs[] =
 			1,                              // projectiles fired each shot
 
 			//timings (in msecs)
-			WEAPONUP_FRAMETIME,             // weapon up frametime
+			300,                            // weapon up frametime (a noticeable delay)
 			WEAPONDOWN_FRAMETIME,           // weapon down frametime
 			950,                            // reload frametime (same as RL)
 			0,                              // cooldown frametime
@@ -763,7 +763,7 @@ gs_weapon_definition_t gs_weaponDefs[] =
 			35,                             // minimum knockback
 
 			//projectile def
-			900,                            // speed
+			775,                            // speed
 			0,                              // spread
 			0,                              // v_spread
 

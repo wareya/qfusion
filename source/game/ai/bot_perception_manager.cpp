@@ -106,6 +106,8 @@ static inline bool IsLaserBeamInPvs( const edict_t *self, const edict_t *ent ) {
 void EntitiesDetector::Clear() {
 	maybeDangerousRockets.clear();
 	dangerousRockets.clear();
+	maybeVisibleOtherWaves.clear();
+	dangerousWaves.clear();
 	maybeDangerousPlasmas.clear();
 	dangerousPlasmas.clear();
 	maybeDangerousBlasts.clear();
@@ -117,6 +119,8 @@ void EntitiesDetector::Clear() {
 
 	maybeVisibleOtherRockets.clear();
 	visibleOtherRockets.clear();
+	maybeVisibleOtherWaves.clear();
+	visibleOtherWaves.clear();
 	maybeVisibleOtherPlasmas.clear();
 	visibleOtherPlasmas.clear();
 	maybeVisibleOtherBlasts.clear();
@@ -143,6 +147,9 @@ void EntitiesDetector::Run() {
 			case ET_ROCKET:
 				TryAddEntity( ent, DETECT_ROCKET_SQ_RADIUS, maybeDangerousRockets, maybeVisibleOtherRockets );
 				break;
+			case ET_WAVE:
+				TryAddEntity( ent, DETECT_WAVE_SQ_RADIUS, maybeDangerousWaves, maybeVisibleOtherWaves );
+				break;
 			case ET_PLASMA:
 				TryAddEntity( ent, DETECT_PLASMA_SQ_RADIUS, maybeDangerousPlasmas, maybeVisibleOtherPlasmas );
 				break;
@@ -154,6 +161,7 @@ void EntitiesDetector::Run() {
 				break;
 			case ET_LASERBEAM:
 				TryAddEntity( ent, DETECT_LG_BEAM_SQ_RADIUS, maybeDangerousLasers, maybeVisibleOtherLasers );
+				break;
 			default:
 				break;
 		}
@@ -170,6 +178,9 @@ void EntitiesDetector::Run() {
 
 	if( FilterRawEntitiesWithDistances( maybeDangerousRockets, dangerousRockets, 12, isGenInPvs, isGenVisible ) ) {
 		FilterRawEntitiesWithDistances( maybeVisibleOtherRockets, visibleOtherRockets, 6, isGenInPvs, isGenVisible );
+	}
+	if( FilterRawEntitiesWithDistances( maybeDangerousWaves, dangerousWaves, 12, isGenInPvs, isGenVisible ) ) {
+		FilterRawEntitiesWithDistances( maybeVisibleOtherWaves, visibleOtherWaves, 6, isGenInPvs, isGenVisible );
 	}
 	if( FilterRawEntitiesWithDistances( maybeDangerousPlasmas, dangerousPlasmas, 48, isGenInPvs, isGenVisible ) ) {
 		FilterRawEntitiesWithDistances( maybeVisibleOtherPlasmas, visibleOtherPlasmas, 12, isGenInPvs, isGenVisible );
@@ -247,14 +258,14 @@ class PlasmaBeam
 		: startProjectile( nullptr ),
 		endProjectile( nullptr ),
 		owner( nullptr ),
-		projectilesCount( 0 ) {}
+		damage( 0.0f ) {}
 
 public:
 	PlasmaBeam( const edict_t *firstProjectile )
 		: startProjectile( firstProjectile ),
 		endProjectile( firstProjectile ),
 		owner( game.edicts + firstProjectile->s.ownerNum ),
-		projectilesCount( 1 ) {}
+		damage( firstProjectile->projectileInfo.maxDamage ) {}
 
 	const edict_t *startProjectile;
 	const edict_t *endProjectile;
@@ -263,7 +274,7 @@ public:
 	inline Vec3 start() { return Vec3( startProjectile->s.origin ); }
 	inline Vec3 end() { return Vec3( endProjectile->s.origin ); }
 
-	int projectilesCount;
+	float damage;
 
 	inline void AddProjectile( const edict_t *nextProjectile ) {
 		endProjectile = nextProjectile;
@@ -271,7 +282,7 @@ public:
 		if( owner != nextProjectile->r.owner ) {
 			owner = nullptr;
 		}
-		projectilesCount++;
+		damage += nextProjectile->projectileInfo.maxDamage;
 	}
 };
 
@@ -470,7 +481,6 @@ void PlasmaBeamsBuilder::FindMostDangerousBeams() {
 	}
 
 	const auto *weaponDef = GS_GetWeaponDef( WEAP_PLASMAGUN );
-	const float plasmaDamage = 0.5f * ( weaponDef->firedef.damage + weaponDef->firedef_weak.damage );
 	const float splashRadius = 1.2f * 0.5f * ( weaponDef->firedef.splash_radius + weaponDef->firedef_weak.splash_radius );
 	float minDamageScore = 0.0f;
 
@@ -514,9 +524,11 @@ void PlasmaBeamsBuilder::FindMostDangerousBeams() {
 
 			// Direct hit
 			if( bot == game.edicts + trace.ent ) {
-				float damageScore = beam->projectilesCount * plasmaDamage;
+				float damageScore = beam->damage;
 				if( damageScore > minDamageScore ) {
-					if( perceptionManager->TryAddDanger( damageScore, trace.endpos, beamsList.avgDirection.Data(), beam->owner ) ) {
+					if( perceptionManager->TryAddDanger( damageScore, trace.endpos,
+														 beamsList.avgDirection.Data(),
+														 beam->owner, 1.5f * splashRadius ) ) {
 						minDamageScore = damageScore;
 					}
 				}
@@ -526,10 +538,11 @@ void PlasmaBeamsBuilder::FindMostDangerousBeams() {
 			// Splash hit
 			float hitVecLen = botOrigin.FastDistanceTo( trace.endpos );
 			if( hitVecLen < splashRadius ) {
-				// We treat up to 3 projectiles as a single explosion cluster (other projectiles are still flying)
-				float damageScore = std::max( 3, beam->projectilesCount ) * ( 1.0f - hitVecLen / splashRadius );
+				float damageScore = beam->damage * ( 1.0f - hitVecLen / splashRadius );
 				if( damageScore > minDamageScore ) {
-					if( perceptionManager->TryAddDanger( damageScore, trace.endpos, beamsList.avgDirection.Data(), beam->owner ) ) {
+					if( perceptionManager->TryAddDanger( damageScore, trace.endpos,
+														 beamsList.avgDirection.Data(),
+														 beam->owner, 1.5f * splashRadius ) ) {
 						minDamageScore = damageScore;
 					}
 				}
@@ -541,30 +554,26 @@ void PlasmaBeamsBuilder::FindMostDangerousBeams() {
 BotPerceptionManager::BotPerceptionManager( edict_t *self_ )
 	: entitiesDetector( self_ ),
 	self( self_ ),
-	rocketDangersPool( "rocket dangers pool" ),
-	plasmaBeamDangersPool( "plasma beam dangers pool" ),
-	grenadeDangersPool( "grenade dangers pool" ),
-	blastDangersPool( "blast dangers pool" ),
-	laserBeamsPool( "laser beams pool" ),
 	primaryDanger( nullptr ),
+	dangersPool( "dangersPool" ),
 	jumppadUsersTracker( this ) {
 	SetupEventHandlers();
 }
 
 bool BotPerceptionManager::TryAddDanger( float damageScore, const vec3_t hitPoint, const vec3_t direction,
-										 const edict_t *owner, bool splash ) {
+										 const edict_t *owner, float splashRadius ) {
 	if( primaryDanger ) {
 		if( primaryDanger->damage >= damageScore ) {
 			return false;
 		}
 	}
 
-	if( Danger *danger = plasmaBeamDangersPool.New() ) {
+	if( Danger *danger = dangersPool.New() ) {
 		danger->damage = damageScore;
 		danger->hitPoint.Set( hitPoint );
 		danger->direction.Set( direction );
 		danger->attacker = owner;
-		danger->splash = splash;
+		danger->splashRadius = splashRadius;
 		if( primaryDanger ) {
 			primaryDanger->DeleteSelf();
 		}
@@ -602,24 +611,26 @@ void BotPerceptionManager::Think() {
 	ResetTeammatesVisData();
 
 	if( !entitiesDetector.dangerousRockets.empty() ) {
-		const auto &def = GS_GetWeaponDef( WEAP_ROCKETLAUNCHER );
-		FindProjectileDangers( entitiesDetector.dangerousRockets, 1.35f * def->firedef.splash_radius, def->firedef.damage );
+		FindProjectileDangers( entitiesDetector.dangerousRockets );
 		TryGuessingProjectileOwnersOrigins( entitiesDetector.dangerousRockets, 0.0f );
 	}
 
 	TryGuessingProjectileOwnersOrigins( entitiesDetector.visibleOtherRockets, 0.0f );
 
+	if( !entitiesDetector.dangerousWaves.empty() ) {
+		FindWaveDangers( entitiesDetector.dangerousWaves );
+		TryGuessingProjectileOwnersOrigins( entitiesDetector.dangerousWaves, 0.0f );
+	}
+
 	if( !entitiesDetector.dangerousBlasts.empty() ) {
-		const auto &def = GS_GetWeaponDef( WEAP_GUNBLADE );
-		FindProjectileDangers( entitiesDetector.dangerousBlasts, 1.20f * def->firedef.splash_radius, def->firedef.damage );
+		FindProjectileDangers( entitiesDetector.dangerousBlasts );
 		TryGuessingProjectileOwnersOrigins( entitiesDetector.dangerousBlasts, 0.0f );
 	}
 
 	TryGuessingProjectileOwnersOrigins( entitiesDetector.visibleOtherBlasts, 0.0f );
 
 	if( !entitiesDetector.dangerousGrenades.empty() ) {
-		const auto &def = GS_GetWeaponDef( WEAP_GRENADELAUNCHER );
-		FindProjectileDangers( entitiesDetector.dangerousGrenades, 1.75f * def->firedef.splash_radius, def->firedef.damage );
+		FindProjectileDangers( entitiesDetector.dangerousGrenades );
 		TryGuessingProjectileOwnersOrigins( entitiesDetector.dangerousGrenades, 0.0f );
 	}
 
@@ -642,6 +653,71 @@ void BotPerceptionManager::Think() {
 	// Set the primary danger timeout after all
 	if( primaryDanger ) {
 		primaryDanger->timeoutAt = level.time + Danger::TIMEOUT;
+	}
+}
+
+void BotPerceptionManager::FindWaveDangers( const EntNumsVector &entNums ) {
+	auto *const gameEdicts = game.edicts;
+	const auto *weaponDef = GS_GetWeaponDef( WEAP_SHOCKWAVE );
+	trace_t trace;
+	for( auto entNum: entNums ) {
+		edict_t *wave = gameEdicts + entNum;
+		float dangerRadius;
+		if( wave->style == MOD_SHOCKWAVE_S ) {
+			dangerRadius = weaponDef->firedef.splash_radius + 32.0f;
+		} else {
+			dangerRadius = weaponDef->firedef_weak.splash_radius + 24.0f;
+		}
+
+		// We try checking whether the wave passes near the bot inflicting a corona damage.
+		// TODO: This code assumes that the bot origin remains the same.
+		// This is not so bad because dangers are checked each Think() frame
+		// and there is some additional extent applied to the damage radius,
+		// but it would be nice to predict an actual trajectory intersection.
+
+		// Compute a distance from wave linear movement line to bot
+		Vec3 lineDir( wave->velocity );
+		float waveSpeed = lineDir.NormalizeFast();
+		Vec3 botToLinePoint( wave->s.origin );
+		botToLinePoint -= self->s.origin;
+		Vec3 projection( lineDir );
+		projection *= botToLinePoint.Dot( lineDir );
+		Vec3 perpendicular( botToLinePoint );
+		perpendicular -= projection;
+		const float squareDistance =  perpendicular.SquaredLength();
+		if( squareDistance > dangerRadius * dangerRadius ) {
+			continue;
+		}
+
+		// We're sure the wave is in PVS and is visible by bot, that's what EntitiesDetector yields
+		// Now check whether the wave hits an obstacle on a safe distance.
+
+		Vec3 traceEnd( lineDir );
+		traceEnd *= EntitiesDetector::DETECT_WAVE_RADIUS / waveSpeed;
+		traceEnd += wave->s.origin;
+		G_Trace( &trace, wave->s.origin, nullptr, nullptr, traceEnd.Data(), wave, MASK_SHOT );
+		bool isDirectHit = false;
+		if( trace.fraction != 1.0f ) {
+			if( DistanceSquared( trace.endpos, self->s.origin ) > dangerRadius * dangerRadius ) {
+				continue;
+			}
+			isDirectHit = ( trace.ent == ENTNUM( self ) );
+		}
+		// Put the likely case first
+		float damage = wave->projectileInfo.maxDamage;
+		if( !isDirectHit ) {
+			float distance = SQRTFAST( squareDistance );
+			float damageScore = damage * ( 3.0f - 2.0f * ( distance / dangerRadius ) );
+			// Treat the nearest point on the line as a hit point
+			// perpendicular = hitPoint - self->s.origin;
+			Vec3 hitPoint( perpendicular );
+			hitPoint += self->s.origin;
+			Vec3 hitDir( perpendicular );
+			hitDir *= 1.0f / distance;
+			TryAddDanger( damageScore, hitPoint.Data(), hitDir.Data(), gameEdicts + wave->s.ownerNum, dangerRadius );
+		} else {
+			TryAddDanger( 3.0f * damage, trace.endpos, lineDir.Data(), gameEdicts + wave->s.ownerNum, dangerRadius );
+		}
 	}
 }
 
@@ -701,14 +777,14 @@ void BotPerceptionManager::FindLaserDangers( const EntNumsVector &entNums ) {
 		}
 
 		if( damageScore > maxDamageScore ) {
-			if( TryAddDanger( damageScore, trace.endpos, direction.Data(), owner, false ) ) {
+			if( TryAddDanger( damageScore, trace.endpos, direction.Data(), owner, 0.0f ) ) {
 				maxDamageScore = damageScore;
 			}
 		}
 	}
 }
 
-void BotPerceptionManager::FindProjectileDangers( const EntNumsVector &entNums, float dangerRadius, float damageScale ) {
+void BotPerceptionManager::FindProjectileDangers( const EntNumsVector &entNums ) {
 	trace_t trace;
 	float minPrjFraction = 1.0f;
 	float minDamageScore = 0.0f;
@@ -725,11 +801,12 @@ void BotPerceptionManager::FindProjectileDangers( const EntNumsVector &entNums, 
 
 		minPrjFraction = trace.fraction;
 		float hitVecLen = botOrigin.FastDistanceTo( trace.endpos );
-		if( hitVecLen >= dangerRadius ) {
+		if( hitVecLen >= 1.25f * target->projectileInfo.radius ) {
 			continue;
 		}
 
-		float damageScore = 1.0f - hitVecLen / dangerRadius;
+		float damageScore = target->projectileInfo.maxDamage;
+		damageScore *= 1.0f - hitVecLen / ( 1.25f * target->projectileInfo.radius );
 		if( damageScore <= minDamageScore ) {
 			continue;
 		}
@@ -742,7 +819,9 @@ void BotPerceptionManager::FindProjectileDangers( const EntNumsVector &entNums, 
 		} else {
 			direction = Vec3( &axis_identity[AXIS_UP] );
 		}
-		if( TryAddDanger( damageScore, trace.endpos, direction.Data(), gameEdicts + target->s.ownerNum, true ) ) {
+		if( TryAddDanger( damageScore, trace.endpos, direction.Data(),
+						  gameEdicts + target->s.ownerNum,
+						  1.25f * target->projectileInfo.radius ) ) {
 			minDamageScore = damageScore;
 		}
 	}
