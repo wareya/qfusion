@@ -61,14 +61,14 @@ public:
 			vertex[i].colour = this->color;
 		}
 
-		const float shift = element->GetClientHeight() * tangent;
+		const float shift = 0.5f * element->GetClientHeight() * tangent;
 
 		vertex[0].position = topleft;
 		vertex[0].position.x += shift;
-		vertex[1].position = Vector2f( bottomright.x, topleft.y );
+		vertex[1].position = Vector2f( bottomright.x + shift, topleft.y );
 		vertex[2].position = bottomright;
 		vertex[2].position.x -= shift;
-		vertex[3].position = Vector2f( topleft.x, bottomright.y );
+		vertex[3].position = Vector2f( topleft.x - shift, bottomright.y );
 
 		int indices[6] = { 0, 1, 2, 0, 2, 3 };
 
