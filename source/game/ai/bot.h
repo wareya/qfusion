@@ -340,6 +340,8 @@ private:
 	BotUseStairsExitMovementFallback useStairsExitMovementFallback;
 	BotUseWalkableTriggerMovementFallback useWalkableTriggerMovementFallback;
 
+	BotJumpToFeasibleSpotMovementFallback jumpToFeasibleSpotMovementFallback;
+
 	BotMovementFallback *activeMovementFallback;
 
 	int64_t vsayTimeout;
