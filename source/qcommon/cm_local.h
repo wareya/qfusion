@@ -45,48 +45,46 @@ typedef struct {
 } cbrushside_t;
 
 typedef struct {
-	int contents;
-	int checkcount;             // to avoid repeated testings
+	cbrushside_t *brushsides;
 
 	vec3_t mins, maxs;
 
+	int contents;
+	int checkcount;             // to avoid repeated testings
 	int numsides;
-	cbrushside_t *brushsides;
 } cbrush_t;
 
 typedef struct {
-	int contents;
-	int checkcount;             // to avoid repeated testings
+	cbrush_t *facets;
 
 	vec3_t mins, maxs;
 
+	int contents;
+	int checkcount;             // to avoid repeated testings
 	int numfacets;
-	cbrush_t *facets;
 } cface_t;
 
 typedef struct {
+	cbrush_t **markbrushes;
+	cface_t **markfaces;
+
 	int contents;
 	int cluster;
-
 	int area;
-
 	int nummarkbrushes;
-	cbrush_t **markbrushes;
-
 	int nummarkfaces;
-	cface_t **markfaces;
 } cleaf_t;
 
 typedef struct cmodel_s {
-	vec3_t mins, maxs;
-
-	int nummarkfaces;
 	cface_t **markfaces;
-
-	int nummarkbrushes;
 	cbrush_t **markbrushes;
 
+	vec3_t mins, maxs;
 	vec3_t cyl_offset;
+
+	int nummarkfaces;
+	int nummarkbrushes;
+
 	float cyl_halfheight;
 	float cyl_radius;
 
