@@ -22,7 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define CM_SUBDIV_LEVEL     ( 16 )
 
-//#define TRACEVICFIX
 #define TRACE_NOAXIAL_SAFETY_OFFSET 0.1
 
 // keep 1/8 unit away to keep the position valid before network snapping

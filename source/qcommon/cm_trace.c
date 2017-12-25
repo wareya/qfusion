@@ -446,13 +446,8 @@ BOX TRACING
 ===============================================================================
 */
 
-//#define TRACEVICFIX
-
 // 1/32 epsilon to keep floating point happy
 #define DIST_EPSILON    ( 1.0f / 32.0f )
-#ifdef TRACEVICFIX
-#define FRAC_EPSILON    ( 1.0f / 1024.0f )
-#endif
 #define RADIUS_EPSILON      1.0f
 
 typedef struct {
@@ -465,9 +460,6 @@ typedef struct {
 	vec3_t absmins, absmaxs;
 	vec3_t extents;
 
-#ifdef TRACEVICFIX
-	float realfraction;
-#endif
 	int contents;
 	bool ispoint;      // optimized case
 } traceLocal_t;
@@ -479,9 +471,6 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	int i;
 	cplane_t *p, *clipplane;
 	float enterfrac, leavefrac;
-#ifdef TRACEVICFIX
-	float enterdist = 0, move = 1;
-#endif
 	float d1, d2, f;
 	bool getout, startout;
 	cbrushside_t *side, *leadside;
@@ -563,25 +552,6 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 		if( d1 <= 0 && d2 <= 0 ) {
 			continue;
 		}
-#ifdef TRACEVICFIX
-		// crosses face
-		f = d1 - d2;
-		if( f > 0 ) {       // enter
-			f = d1 / f;
-			if( f > enterfrac ) {
-				enterdist = d1;
-				move = d1 - d2;
-				enterfrac = f;
-				clipplane = p;
-				leadside = side;
-			}
-		} else if( f < 0 ) {   // leave
-			f = d1 / f;
-			if( f < leavefrac ) {
-				leavefrac = f;
-			}
-		}
-#else
 		// crosses face
 		f = d1 - d2;
 		if( f > 0 ) {   // enter
@@ -597,7 +567,6 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 				leavefrac = f;
 			}
 		}
-#endif
 	}
 
 	if( !startout ) {
@@ -610,23 +579,6 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 		}
 		return;
 	}
-#ifdef TRACEVICFIX
-	if( enterfrac - FRAC_EPSILON <= leavefrac ) {
-		if( enterfrac > -1 && enterfrac < tlc->realfraction ) {
-			if( enterfrac < 0 ) {
-				enterfrac = 0;
-			}
-			tlc->realfraction = enterfrac;
-			tlc->trace->plane = *clipplane;
-			tlc->trace->surfFlags = leadside->surfFlags;
-			tlc->trace->contents = brush->contents;
-			tlc->trace->fraction = ( enterdist - DIST_EPSILON ) / move;
-			if( tlc->trace->fraction < 0 ) {
-				tlc->trace->fraction = 0;
-			}
-		}
-	}
-#else
 	if( enterfrac - ( 1.0f / 1024.0f ) <= leavefrac ) {
 		if( enterfrac > -1 && enterfrac < tlc->trace->fraction ) {
 			if( enterfrac < 0 ) {
@@ -638,7 +590,6 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 			tlc->trace->contents = brush->contents;
 		}
 	}
-#endif
 }
 
 /*
@@ -811,15 +762,9 @@ static void CM_RecursiveHullCheck( cmodel_state_t *cms, traceLocal_t *tlc, int n
 	vec3_t mid;
 
 loc0:
-#ifdef TRACEVICFIX
-	if( trace_realfraction <= p1f ) {
-		return; // already hit something nearer
-	}
-#else
 	if( tlc->trace->fraction <= p1f ) {
 		return; // already hit something nearer
 	}
-#endif
 	// if < 0, we are in a leaf node
 	if( num < 0 ) {
 		cleaf_t *leaf;
@@ -868,23 +813,13 @@ loc0:
 	if( t1 < t2 ) {
 		idist = 1.0 / ( t1 - t2 );
 		side = 1;
-#ifdef TRACEVICFIX
-		frac2 = ( t1 + offset ) * idist;
-		frac = ( t1 - offset ) * idist;
-#else
 		frac2 = ( t1 + offset + DIST_EPSILON ) * idist;
 		frac = ( t1 - offset + DIST_EPSILON ) * idist;
-#endif
 	} else if( t1 > t2 ) {
 		idist = 1.0 / ( t1 - t2 );
 		side = 0;
-#ifdef TRACEVICFIX
-		frac2 = ( t1 - offset ) * idist;
-		frac = ( t1 + offset ) * idist;
-#else
 		frac2 = ( t1 - offset - DIST_EPSILON ) * idist;
 		frac = ( t1 + offset + DIST_EPSILON ) * idist;
-#endif
 	} else {
 		side = 0;
 		frac = 1;
@@ -923,11 +858,7 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 
 	// fill in a default trace
 	memset( tr, 0, sizeof( *tr ) );
-#ifdef TRACEVICFIX
-	tr->fraction = tlc.realfraction = 1;
-#else
 	tr->fraction = 1;
-#endif
 	if( !cms->numnodes ) { // map not loaded
 		return;
 	}
@@ -1014,9 +945,6 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 		CM_ClipBox( cms, &tlc, cmodel->markbrushes, cmodel->nummarkbrushes, cmodel->markfaces, cmodel->nummarkfaces );
 	}
 
-#ifdef TRACEVICFIX
-	clamp( tr->fraction, 0, 1 );
-#endif
 	if( tr->fraction == 1 ) {
 		VectorCopy( end, tr->endpos );
 	} else {
