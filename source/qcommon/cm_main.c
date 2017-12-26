@@ -30,7 +30,6 @@ static qmutex_t *cm_lock;
 static mempool_t *cmap_mempool;
 
 static cvar_t *cm_noAreas;
-cvar_t *cm_noCurves;
 
 void CM_LoadQ3BrushModel( cmodel_state_t *cms, void *parent, void *buffer, bspFormatDesc_t *format );
 void CM_LoadQ2BrushModel( cmodel_state_t *cms, void *parent, void *buf, bspFormatDesc_t *format );
@@ -1065,7 +1064,6 @@ void CM_Init( void ) {
 	cmap_mempool = Mem_AllocPool( NULL, "Collision Map" );
 
 	cm_noAreas =        Cvar_Get( "cm_noAreas", "0", CVAR_CHEAT );
-	cm_noCurves =       Cvar_Get( "cm_noCurves", "0", CVAR_CHEAT );
 
 	cm_initialized = true;
 }

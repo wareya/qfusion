@@ -371,16 +371,14 @@ static int CM_PointContents( cmodel_state_t *cms, vec3_t p, cmodel_t *cmodel ) {
 		}
 	}
 
-	if( !cm_noCurves->integer ) {
-		for( i = 0; i < nummarkfaces; i++ ) {
-			patch = markface[i];
+	for( i = 0; i < nummarkfaces; i++ ) {
+		patch = markface[i];
 
-			// check if patch adds something to contents
-			if( contents & patch->contents ) {
-				if( BoundsIntersect( p, p, patch->mins, patch->maxs ) ) {
-					if( !( contents &= ~CM_PatchContents( patch, p ) ) ) {
-						return superContents;
-					}
+		// check if patch adds something to contents
+		if( contents & patch->contents ) {
+			if( BoundsIntersect( p, p, patch->mins, patch->maxs ) ) {
+				if( !( contents &= ~CM_PatchContents( patch, p ) ) ) {
+					return superContents;
 				}
 			}
 		}
@@ -698,10 +696,6 @@ static void CM_CollideBox( cmodel_state_t *cms, traceLocal_t *tlc,
 		if( !tlc->trace->fraction ) {
 			return;
 		}
-	}
-
-	if( cm_noCurves->integer || !nummarkfaces ) {
-		return;
 	}
 
 	// trace line against all patches

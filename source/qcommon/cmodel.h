@@ -20,8 +20,6 @@
 
 typedef struct cmodel_state_s cmodel_state_t;
 
-extern cvar_t *cm_noCurves;
-
 // debug/performance counter vars
 int c_pointcontents, c_traces, c_brush_traces;
 
