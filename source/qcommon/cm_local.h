@@ -40,7 +40,7 @@ typedef struct {
 } cnode_t;
 
 typedef struct {
-	cplane_t *plane;
+	cplane_t plane;
 	int surfFlags;
 } cbrushside_t;
 

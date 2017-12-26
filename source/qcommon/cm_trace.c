@@ -51,7 +51,7 @@ void CM_InitBoxHull( cmodel_state_t *cms ) {
 	for( i = 0; i < 6; i++ ) {
 		// brush sides
 		s = cms->box_brushsides + i;
-		s->plane = cms->box_planes + i;
+		s->plane = cms->box_planes[i];
 		s->surfFlags = 0;
 
 		// planes
@@ -106,7 +106,7 @@ void CM_InitOctagonHull( cmodel_state_t *cms ) {
 	for( i = 0; i < 6; i++ ) {
 		// brush sides
 		s = cms->oct_brushsides + i;
-		s->plane = cms->oct_planes + i;
+		s->plane = cms->oct_planes[i];
 		s->surfFlags = 0;
 
 		// planes
@@ -128,7 +128,7 @@ void CM_InitOctagonHull( cmodel_state_t *cms ) {
 	for( i = 6; i < 10; i++ ) {
 		// brush sides
 		s = cms->oct_brushsides + i;
-		s->plane = cms->oct_planes + i;
+		s->plane = cms->oct_planes[i];
 		s->surfFlags = 0;
 
 		// planes
@@ -300,7 +300,7 @@ static inline int CM_BrushContents( cbrush_t *brush, vec3_t p ) {
 	cbrushside_t *brushside;
 
 	for( i = 0, brushside = brush->brushsides; i < brush->numsides; i++, brushside++ )
-		if( PlaneDiff( p, brushside->plane ) > 0 ) {
+		if( PlaneDiff( p, &brushside->plane ) > 0 ) {
 			return 0;
 		}
 
@@ -491,7 +491,7 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	side = brush->brushsides;
 
 	for( i = 0; i < brush->numsides; i++, side++ ) {
-		p = side->plane;
+		p = &side->plane;
 
 		// push the plane out apropriately for mins/maxs
 		if( p->type < 3 ) {
@@ -606,7 +606,7 @@ static void CM_TestBoxInBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 
 	side = brush->brushsides;
 	for( i = 0; i < brush->numsides; i++, side++ ) {
-		p = side->plane;
+		p = &side->plane;
 
 		// push the plane out appropriately for mins/maxs
 		// if completely in front of face, no intersection
