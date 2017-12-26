@@ -65,7 +65,7 @@ typedef enum {
 	FS_PURE_EXPLICIT    = 2
 } fs_pure_t;
 
-static const char *pak_extensions[] = { "pk3", "pk2", NULL };
+static const char *pak_extensions[] = { "pakwsw", "pk3", "pk2", NULL };
 
 static const char *forbidden_gamedirs[] = {
 	"docs",
@@ -2526,6 +2526,7 @@ static pack_t *FS_LoadZipFile( const char *packfilename, bool silent ) {
 	unsigned char zipHeader[20]; // we can't use a struct here because of packing
 	unsigned offset, centralPos, sizeCentralDir, offsetCentralDir, byteBeforeTheZipFile;
 	bool modulepack;
+	bool expectUncompressedFiles;
 	int manifestFilesize;
 	void *handle = NULL;
 	void *vfsHandle = NULL;
@@ -2635,6 +2636,11 @@ static pack_t *FS_LoadZipFile( const char *packfilename, bool silent ) {
 		modulepack = false;
 	}
 
+	// We can't check file compression at the first pass since reading pak file info
+	// requires providing a buffer of arbitrary length for the file name.
+	// This check should be very rarely triggered anyway.
+	expectUncompressedFiles = Q_strrstr( packfilename, ".pakwsw" ) != NULL;
+
 	manifestFilesize = -1;
 
 	// add all files to the trie
@@ -2648,6 +2654,16 @@ static pack_t *FS_LoadZipFile( const char *packfilename, bool silent ) {
 		file->vfsHandle = vfsHandle;
 
 		offset = FS_ZipGetFileInfo( fin, vfsHandle, centralPos, byteBeforeTheZipFile, file, &len, &checksums[i] );
+
+		if( expectUncompressedFiles ) {
+			if( file->flags & FS_PACKFILE_DEFLATED ) {
+				if( !silent ) {
+					const char *fmt = "%s contains a compressed file: %s, compression is disallowed for this kind of paks\n";
+					Com_Printf( fmt, packfilename, file->name );
+				}
+				goto error;
+			}
+		}
 
 		if( !COM_ValidateRelativeFilename( file->name ) ) {
 			if( !silent ) {
@@ -2748,7 +2764,7 @@ static pack_t *FS_LoadPackFile( const char *packfilename, bool silent ) {
 		}
 	}
 
-	if( !Q_stricmp( ext, ".pk3" ) || !Q_stricmp( ext, ".pk2" ) ) {
+	if( !Q_stricmp( ext, ".pakwsw" ) || !Q_stricmp( ext, ".pk3" ) || !Q_stricmp( ext, ".pk2" ) ) {
 		return FS_LoadZipFile( packfilename, silent );
 	}
 	return NULL;
