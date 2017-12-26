@@ -210,12 +210,12 @@ static inline unsigned short LittleShortRaw( const uint8_t *raw ) {
 }
 
 /*
-* FS_PK3CheckFileCoherency
+* FS_ZipCheckFileCoherency
 *
 * Read the local header of the current zipfile
 * Check the coherency of the local header and info in the end of central directory about this file
 */
-static unsigned FS_PK3CheckFileCoherency( FILE *f, packfile_t *file ) {
+static unsigned FS_ZipCheckFileCoherency( FILE *f, packfile_t *file ) {
 	unsigned flags;
 	unsigned char localHeader[31], compressed;
 
@@ -1065,7 +1065,7 @@ static int _FS_FOpenPakFile( packfile_t *pakFile, int *filenum ) {
 	file->pakFile = pakFile;
 
 	if( !( pakFile->flags & FS_PACKFILE_COHERENT ) ) {
-		unsigned offset = FS_PK3CheckFileCoherency( file->fstream, pakFile );
+		unsigned offset = FS_ZipCheckFileCoherency( file->fstream, pakFile );
 		if( !offset ) {
 			Com_DPrintf( "_FS_FOpenPakFile: can't get proper offset for %s\n", pakFile->name );
 			return -1;
@@ -1404,11 +1404,11 @@ static int FS_ReadStream( uint8_t *buf, size_t len, filehandle_t *fh ) {
 }
 
 /*
-* FS_ReadPK3File
+* FS_ReadZipFile
 *
 * Properly handles partial reads, used by FS_Read and FS_Seek
 */
-static int FS_ReadPK3File( uint8_t *buf, size_t len, filehandle_t *fh ) {
+static int FS_ReadZipFile( uint8_t *buf, size_t len, filehandle_t *fh ) {
 	zipEntry_t *zipEntry;
 	int error, flush;
 	size_t read, block;
@@ -1444,7 +1444,7 @@ static int FS_ReadPK3File( uint8_t *buf, size_t len, filehandle_t *fh ) {
 			break;
 		}
 		if( error != Z_OK ) {
-			Sys_Error( "FS_ReadPK3File: can't inflate file" );
+			Sys_Error( "FS_ReadZipFile: can't inflate file" );
 		}
 	} while( zipEntry->zstream.avail_out > 0 );
 
@@ -1484,7 +1484,7 @@ int FS_Read( void *buffer, size_t len, int file ) {
 	}
 
 	if( fh->zipEntry ) {
-		total = FS_ReadPK3File( ( uint8_t * )buffer, len, fh );
+		total = FS_ReadZipFile( ( uint8_t * )buffer, len, fh );
 	} else if( fh->streamHandle ) {
 		total = FS_ReadStream( (uint8_t *)buffer, len, fh );
 	} else if( fh->gzstream ) {
@@ -1704,7 +1704,7 @@ int FS_Seek( int file, int offset, int whence ) {
 	do {
 		block = min( remaining, sizeof( buf ) );
 
-		FS_ReadPK3File( buf, block, fh );
+		FS_ReadZipFile( buf, block, fh );
 
 		remaining -= block;
 	} while( remaining > 0 );
@@ -1943,9 +1943,9 @@ unsigned FS_ChecksumAbsoluteFile( const char *filename ) {
 }
 
 /*
-* FS_ChecksumPK3File
+* FS_ChecksumZipFile
 */
-static unsigned FS_ChecksumPK3File( const char *filename, int numPakFiles, int *checksums ) {
+static unsigned FS_ChecksumZipFile( const char *filename, int numPakFiles, int *checksums ) {
 	md5_byte_t digest[16];
 	md5_state_t state;
 	int pakFileInd;
@@ -1997,7 +1997,7 @@ static unsigned FS_PakChecksum( const char *filename ) {
 * FS_ChecksumBaseFile
 *
 * ignorePakChecksum - if true, returns md5 digest of file contents as found on the filesystem
-*                     otherwise, may return cached pk3 checksum
+*                     otherwise, may return cached pak checksum
 */
 unsigned FS_ChecksumBaseFile( const char *filename, bool ignorePakChecksum ) {
 	const char *fullname;
@@ -2354,11 +2354,11 @@ static void FS_ReadPackManifest( pack_t *pack ) {
 }
 
 /*
-* FS_PK3SearchCentralDir
+* FS_ZipSearchCentralDir
 *
 * Locate the central directory of a zipfile (at the end, just before the global comment)
 */
-static unsigned FS_PK3SearchCentralDir( FILE *fin, void *vfsHandle ) {
+static unsigned FS_ZipSearchCentralDir( FILE *fin, void *vfsHandle ) {
 	unsigned fileSize, backRead;
 	unsigned maxBack = 0xffff; // maximum size of global comment
 	unsigned char buf[FS_ZIP_BUFREADCOMMENT + 4];
@@ -2439,11 +2439,11 @@ static time_t FS_DosTimeToUnixtime( unsigned dosDateTime ) {
 }
 
 /*
-* FS_PK3GetFileInfo
+* FS_ZipGetFileInfo
 *
 * Get Info about the current file in the zipfile, with internal only info
 */
-static unsigned FS_PK3GetFileInfo( FILE *f, void *vfsHandle, unsigned pos, unsigned byteBeforeTheZipFile,
+static unsigned FS_ZipGetFileInfo( FILE *f, void *vfsHandle, unsigned pos, unsigned byteBeforeTheZipFile,
 								   packfile_t *file, size_t *fileNameLen, int *crc ) {
 	size_t sizeRead;
 	unsigned dosDateTime;
@@ -2507,14 +2507,14 @@ static unsigned FS_PK3GetFileInfo( FILE *f, void *vfsHandle, unsigned pos, unsig
 }
 
 /*
-* FS_LoadPK3File
+* FS_LoadZipFile
 *
 * Takes an explicit (not game tree related) path to a pak file.
 *
 * Loads the header and directory, adding the files at the beginning
 * of the list so they override previous pack files.
 */
-static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
+static pack_t *FS_LoadZipFile( const char *packfilename, bool silent ) {
 	int i;
 	int *checksums = NULL;
 	int numFiles;
@@ -2539,7 +2539,7 @@ static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
 		handle = Sys_FS_LockFile( packfilename );
 		if( handle == NULL ) {
 			if( !silent ) {
-				Com_Printf( "Error locking PK3 file: %s\n", packfilename );
+				Com_Printf( "Error locking a zip pak file: %s\n", packfilename );
 			}
 			goto error;
 		}
@@ -2548,26 +2548,26 @@ static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
 	fin = fopen( vfsHandle ? Sys_VFS_VFSName( vfsHandle ) : packfilename, "rb" );
 	if( fin == NULL ) {
 		if( !silent ) {
-			Com_Printf( "Error opening PK3 file: %s\n", packfilename );
+			Com_Printf( "Error opening a zip pak file: %s\n", packfilename );
 		}
 		goto error;
 	}
-	centralPos = FS_PK3SearchCentralDir( fin, vfsHandle );
+	centralPos = FS_ZipSearchCentralDir( fin, vfsHandle );
 	if( centralPos == 0 ) {
 		if( !silent ) {
-			Com_Printf( "No central directory found for PK3 file: %s\n", packfilename );
+			Com_Printf( "No central directory found for a zip pak file: %s\n", packfilename );
 		}
 		goto error;
 	}
 	if( fseek( fin, Sys_VFS_FileOffset( vfsHandle ) + centralPos, SEEK_SET ) != 0 ) {
 		if( !silent ) {
-			Com_Printf( "Error seeking PK3 file: %s\n", packfilename );
+			Com_Printf( "Error seeking a zip pak file: %s\n", packfilename );
 		}
 		goto error;
 	}
 	if( fread( zipHeader, 1, sizeof( zipHeader ), fin ) != sizeof( zipHeader ) ) {
 		if( !silent ) {
-			Com_Printf( "Error reading PK3 file: %s\n", packfilename );
+			Com_Printf( "Error reading a zip pak file: %s\n", packfilename );
 		}
 		goto error;
 	}
@@ -2576,14 +2576,14 @@ static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
 	numFiles = LittleShortRaw( &zipHeader[8] );
 	if( !numFiles ) {
 		if( !silent ) {
-			Com_Printf( "%s is not a valid pk3 file\n", packfilename );
+			Com_Printf( "%s is not a valid zip pak file\n", packfilename );
 		}
 		goto error;
 	}
 	if( LittleShortRaw( &zipHeader[10] ) != numFiles || LittleShortRaw( &zipHeader[6] ) != 0
 		|| LittleShortRaw( &zipHeader[4] ) != 0 ) {
 		if( !silent ) {
-			Com_Printf( "%s is not a valid pk3 file\n", packfilename );
+			Com_Printf( "%s is not a valid zip pak file\n", packfilename );
 		}
 		goto error;
 	}
@@ -2595,17 +2595,17 @@ static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
 	offsetCentralDir = LittleLongRaw( &zipHeader[16] );
 	if( centralPos < offsetCentralDir + sizeCentralDir ) {
 		if( !silent ) {
-			Com_Printf( "%s is not a valid pk3 file\n", packfilename );
+			Com_Printf( "%s is not a valid zip pak file\n", packfilename );
 		}
 		goto error;
 	}
 	byteBeforeTheZipFile = centralPos - offsetCentralDir - sizeCentralDir;
 
 	for( i = 0, namesLen = 0, centralPos = offsetCentralDir + byteBeforeTheZipFile; i < numFiles; i++, centralPos += offset ) {
-		offset = FS_PK3GetFileInfo( fin, vfsHandle, centralPos, byteBeforeTheZipFile, NULL, &len, NULL );
+		offset = FS_ZipGetFileInfo( fin, vfsHandle, centralPos, byteBeforeTheZipFile, NULL, &len, NULL );
 		if( !offset ) {
 			if( !silent ) {
-				Com_Printf( "%s is not a valid pk3 file\n", packfilename );
+				Com_Printf( "%s is not a valid zip pak file\n", packfilename );
 			}
 			goto error; // something wrong occured
 		}
@@ -2647,7 +2647,7 @@ static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
 		file->pakname = pack->filename;
 		file->vfsHandle = vfsHandle;
 
-		offset = FS_PK3GetFileInfo( fin, vfsHandle, centralPos, byteBeforeTheZipFile, file, &len, &checksums[i] );
+		offset = FS_ZipGetFileInfo( fin, vfsHandle, centralPos, byteBeforeTheZipFile, file, &len, &checksums[i] );
 
 		if( !COM_ValidateRelativeFilename( file->name ) ) {
 			if( !silent ) {
@@ -2681,24 +2681,24 @@ static pack_t *FS_LoadPK3File( const char *packfilename, bool silent ) {
 	fin = NULL;
 
 	checksums[numFiles] = 0x1234567; // add some pseudo-random stuff
-	pack->checksum = FS_ChecksumPK3File( pack->filename, numFiles + 1, checksums );
+	pack->checksum = FS_ChecksumZipFile( pack->filename, numFiles + 1, checksums );
 
 	if( !pack->checksum ) {
 		if( !silent ) {
-			Com_Printf( "Couldn't generate checksum for pk3 file: %s\n", packfilename );
+			Com_Printf( "Couldn't generate checksum for a zip pak file: %s\n", packfilename );
 		}
 		goto error;
 	}
 
 	Mem_TempFree( checksums );
 
-	// read manifest file if it's a module pk3
+	// read manifest file if it's a module pak
 	if( modulepack && manifestFilesize > 0 ) {
 		FS_ReadPackManifest( pack );
 	}
 
 	if( !silent ) {
-		Com_Printf( "Added pk3 file %s (%i files)\n", pack->filename, pack->numFiles );
+		Com_Printf( "Added a zip pak file %s (%i files)\n", pack->filename, pack->numFiles );
 	}
 
 	return pack;
@@ -2749,7 +2749,7 @@ static pack_t *FS_LoadPackFile( const char *packfilename, bool silent ) {
 	}
 
 	if( !Q_stricmp( ext, ".pk3" ) || !Q_stricmp( ext, ".pk2" ) ) {
-		return FS_LoadPK3File( packfilename, silent );
+		return FS_LoadZipFile( packfilename, silent );
 	}
 	return NULL;
 }
@@ -3568,7 +3568,7 @@ static char **FS_GamePathPaks( searchpath_t *basepath, const char *gamedir, int 
 			// ignore similarly named paks if they appear in both vfs and fs
 			skip = skip || ( i && !Q_stricmp( paknames[i], paknames[i - 1] ) );
 
-			// ignore pure data and modules pk3 files from other versions
+			// ignore pure data and modules pak files from other versions
 			skip = skip || ( FS_IsExplicitPurePak( paknames[i], &wrongpure ) && wrongpure );
 
 			if( skip ) {
@@ -3616,7 +3616,7 @@ static int FS_TouchGamePath( searchpath_t *basepath, const char *gamedir, bool i
 	totalpaks = 0;
 	if( ( paknames = FS_GamePathPaks( basepath, gamedir, &totalpaks ) ) != 0 ) {
 		for( i = 0; i < totalpaks; i++ ) {
-			// ignore already loaded pk3 files if updating
+			// ignore already loaded pak files if updating
 			searchpath_t *compare = fs_searchpaths;
 			while( compare ) {
 				if( compare->pack ) {
@@ -3822,7 +3822,7 @@ static void FS_RemoveExtraPaks( searchpath_t *old ) {
 			while( search && search != old ) {
 				if( search->pack &&
 					!strcmp( COM_FileBase( search->pack->filename ), COM_FileBase( compare->pack->filename ) ) ) {
-					Com_Printf( "Removed duplicate pk3 file %s\n", search->pack->filename );
+					Com_Printf( "Removed a duplicate zip pak file %s\n", search->pack->filename );
 					prev->next = search->next;
 					FS_FreePakFile( search->pack );
 					FS_Free( search );
