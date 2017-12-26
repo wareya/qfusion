@@ -65,7 +65,7 @@ typedef enum {
 	FS_PURE_EXPLICIT    = 2
 } fs_pure_t;
 
-static const char *pak_extensions[] = { "pakwsw", "pk3", "pk2", NULL };
+static const char *pak_extensions[] = { "pkwsw", "pk3", "pk2", NULL };
 
 static const char *forbidden_gamedirs[] = {
 	"docs",
@@ -2639,7 +2639,7 @@ static pack_t *FS_LoadZipFile( const char *packfilename, bool silent ) {
 	// We can't check file compression at the first pass since reading pak file info
 	// requires providing a buffer of arbitrary length for the file name.
 	// This check should be very rarely triggered anyway.
-	expectUncompressedFiles = Q_strrstr( packfilename, ".pakwsw" ) != NULL;
+	expectUncompressedFiles = Q_strrstr( packfilename, ".pkwsw" ) != NULL;
 
 	manifestFilesize = -1;
 
@@ -2764,7 +2764,7 @@ static pack_t *FS_LoadPackFile( const char *packfilename, bool silent ) {
 		}
 	}
 
-	if( !Q_stricmp( ext, ".pakwsw" ) || !Q_stricmp( ext, ".pk3" ) || !Q_stricmp( ext, ".pk2" ) ) {
+	if( !Q_stricmp( ext, ".pkwsw" ) || !Q_stricmp( ext, ".pk3" ) || !Q_stricmp( ext, ".pk2" ) ) {
 		return FS_LoadZipFile( packfilename, silent );
 	}
 	return NULL;
