@@ -327,6 +327,9 @@ void ENV_UpdateListener( const vec3_t origin, const vec3_t velocity ) {
 	if( s_environment_sampling_quality->value < 0.0f || s_environment_sampling_quality->value > 1.0f ) {
 		trap_Cvar_ForceSet( s_environment_sampling_quality->name, "0.5" );
 	}
+	if( s_environment_effects_scale->value < 0.0f || s_environment_effects_scale->value > 1.0f ) {
+		trap_Cvar_ForceSet( s_environment_effects_scale->name, "0.5" );
+	}
 
 	ENV_PrepareUpdatesPriorityQueue();
 
@@ -532,6 +535,9 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	VectorCopy( oldListenerOrigin, testedListenerOrigin );
 	testedListenerOrigin[2] += 18.0f;
 
+	const float effectsScale = s_environment_effects_scale->value;
+	assert( effectsScale >= 0.0f && effectsScale <= 1.0f );
+
 	const float primaryEmissionRadius = ENV_SamplingEmissionRadius( src );
 
 	envUpdateState_t *const updateState = &src->envUpdateState;
@@ -597,6 +603,8 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	// Obviously gain should be higher for enclosed environments.
 	// Do not lower it way too hard here as it is affected by "room size factor" too
 	reverbProps->gain = 0.30f + 0.10f * averageHitFactor;
+	// Can be 1.25x volume non-linear units louder
+	reverbProps->gain *= 0.75f + 0.5f * effectsScale;
 
 	// Simulate sound absorption by the void by lowering this value compared to its default one
 	reverbProps->lateReverbGain = 1.26f - 0.16f * sqrtf( numRaysHitSky / (float)numPrimaryRays );
@@ -654,12 +662,16 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		// Lowering the diffusion adds more "coloration" to the reverb.
 		// Lower the diffusion for larger enclosed environments.
 		reverbProps->diffusion = 1.0f - roomSizeFactor * averageHitFactor;
+		assert( reverbProps->diffusion >= 0.0f && reverbProps->diffusion <= 1.0f );
+		// Greater effectsScale lowers diffusion value so there is more "coloration" in the reverb.
+		reverbProps->diffusion = powf( reverbProps->diffusion, 0.25f + 1.5f * effectsScale );
 		reverbProps->lateReverbDelay = 0.001f + 0.05f * roomSizeFactor;
-		reverbProps->decayTime = 0.70f + 1.50f * roomSizeFactor;
+		// Can be 1.5x time units longer
+		reverbProps->decayTime = 0.70f + 1.50f * ( 0.5f + effectsScale ) * roomSizeFactor;
 		// Lower gain for huge environments. Otherwise it sounds way too artificial.
 		reverbProps->gain *= 1.0f - 0.1f * roomSizeFactor;
 		// Obviously the reflections delay should be higher for large rooms.
-		reverbProps->reflectionsDelay = 0.005f + 0.1f * roomSizeFactor;
+		reverbProps->reflectionsDelay = 0.005f + ( 0.2f + 0.05f * effectsScale ) * roomSizeFactor;
 	} else {
 		// The gain is very low for zero reflections point so it should not be weird if an environment differs.
 		reverbProps->gain = 0.0f;
