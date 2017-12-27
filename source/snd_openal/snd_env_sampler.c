@@ -527,36 +527,28 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	trace_t trace;
 	float primaryHitDistances[MAX_REVERB_PRIMARY_RAY_SAMPLES];
 	vec3_t reflectionPoints[MAX_REVERB_PRIMARY_RAY_SAMPLES];
-	vec3_t testedRayPoint;
 	vec3_t testedListenerOrigin;
-	envUpdateState_t *updateState;
-	reverbProps_t *reverbProps;
-	float squareDistance, averageDistance;
-	float averageHitFactor;
-	unsigned numPrimaryRays, numRaysHitSky, numReflectionPoints;
-	unsigned numPassedSecondaryRays;
-	unsigned i, valueIndex;
-
-	updateState = &src->envUpdateState;
-	reverbProps = &updateState->envProps.reverbProps;
 
 	VectorCopy( oldListenerOrigin, testedListenerOrigin );
 	testedListenerOrigin[2] += 18.0f;
 
 	const float primaryEmissionRadius = ENV_SamplingEmissionRadius( src );
 
+	envUpdateState_t *const updateState = &src->envUpdateState;
+	reverbProps_t *const reverbProps = &updateState->envProps.reverbProps;
 	ENV_SetupSamplingProps( &updateState->reverbPrimaryRaysSamplingProps, 16, MAX_REVERB_PRIMARY_RAY_SAMPLES );
 
-	averageDistance = 0.0f;
-	numRaysHitSky = 0;
-	numReflectionPoints = 0;
-	numPrimaryRays = updateState->reverbPrimaryRaysSamplingProps.numSamples;
-	valueIndex = updateState->reverbPrimaryRaysSamplingProps.valueIndex;
-	for( i = 0; i < numPrimaryRays; ++i ) {
+	float averageDistance = 0.0f;
+	unsigned numRaysHitSky = 0;
+	unsigned numReflectionPoints = 0;
+	unsigned numPrimaryRays = updateState->reverbPrimaryRaysSamplingProps.numSamples;
+	int valueIndex = updateState->reverbPrimaryRaysSamplingProps.valueIndex;
+	for( unsigned i = 0; i < numPrimaryRays; ++i ) {
 		float *sampleDir, *reflectionPoint;
 		valueIndex = ( valueIndex + 1 ) % ARRAYSIZE( randomReverbPrimaryRayDirs );
 		sampleDir = randomReverbPrimaryRayDirs[valueIndex];
 
+		vec3_t testedRayPoint;
 		VectorScale( sampleDir, primaryEmissionRadius, testedRayPoint );
 		VectorAdd( testedRayPoint, src->origin, testedRayPoint );
 		trap_Trace( &trace, src->origin, testedRayPoint, vec3_origin, vec3_origin, MASK_SOLID );
@@ -566,7 +558,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		}
 
 		// Skip surfaces non-reflective for sounds
-		if( trace.surfFlags & ( SURF_SKY|SURF_NOIMPACT|SURF_NOMARKS|SURF_FLESH|SURF_DUST|SURF_NOSTEPS ) ) {
+		if( trace.surfFlags & ( SURF_SKY | SURF_NOIMPACT | SURF_NOMARKS | SURF_FLESH | SURF_DUST | SURF_NOSTEPS ) ) {
 			// Go even further for sky. Simulate an "absorption" of sound by the void.
 			if( trace.surfFlags & SURF_SKY ) {
 				numRaysHitSky++;
@@ -586,7 +578,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		VectorNegate( reflectionPoint, reflectionPoint );
 		VectorAdd( trace.endpos, reflectionPoint, reflectionPoint );
 
-		squareDistance = DistanceSquared( src->origin, trace.endpos );
+		float squareDistance = DistanceSquared( src->origin, trace.endpos );
 		if( squareDistance < REVERB_ENV_DISTANCE_THRESHOLD * REVERB_ENV_DISTANCE_THRESHOLD ) {
 			primaryHitDistances[numReflectionPoints] = sqrtf( squareDistance );
 		} else {
@@ -599,7 +591,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		numReflectionPoints++;
 	}
 
-	averageHitFactor = ( numReflectionPoints / (float)numPrimaryRays );
+	float averageHitFactor = ( numReflectionPoints / (float)numPrimaryRays );
 	assert( averageHitFactor >= 0.0f && averageHitFactor <= 1.0f );
 
 	// Obviously gain should be higher for enclosed environments.
@@ -610,15 +602,12 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	reverbProps->lateReverbGain = 1.26f - 0.26f * sqrtf( numRaysHitSky / (float)numPrimaryRays );
 
 	if( numReflectionPoints ) {
-		float averageDistanceFactor, smallRoomFactor, roomSizeFactor, hitDistanceStdDev;
-		unsigned numPassedSigmaTestPoints;
-
 		averageDistance /= (float)numReflectionPoints;
-		averageDistanceFactor = averageDistance / REVERB_ENV_DISTANCE_THRESHOLD;
+		const float averageDistanceFactor = averageDistance / REVERB_ENV_DISTANCE_THRESHOLD;
 		assert( averageDistanceFactor >= 0.0f && averageDistanceFactor <= 1.0f );
 
 		// This value is just an optimized intermediate result, does not have much sense being taken alone.
-		smallRoomFactor = sqrtf( 1.0f - averageDistanceFactor );
+		const float smallRoomFactor = sqrtf( 1.0f - averageDistanceFactor );
 
 		// Lower the density is the more metallic and distinct the reverberation is.
 		// Let enclosed and small environments have lower density.
@@ -631,18 +620,18 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		reverbProps->lateReverbGain *= 1.0f - 0.2f * averageDistanceFactor;
 
 		// Compute the standard deviation of hit distances to cut off high outliers
-		hitDistanceStdDev = 0.0f;
-		for( i = 0; i < numReflectionPoints; i++ ) {
+		float hitDistanceStdDev = 0.0f;
+		for( int i = 0; i < numReflectionPoints; i++ ) {
 			float delta = primaryHitDistances[i] - averageDistance;
 			hitDistanceStdDev += delta * delta;
 		}
 		hitDistanceStdDev /= numReflectionPoints;
 		hitDistanceStdDev = sqrtf( hitDistanceStdDev );
 
-		numPassedSigmaTestPoints = 0;
-		roomSizeFactor = 0.0f;
+		unsigned numPassedSigmaTestPoints = 0;
+		float roomSizeFactor = 0.0f;
 		// Try count only points that have a hit distance > sigma
-		for( i = 0; i < numReflectionPoints; i++ ) {
+		for( unsigned i = 0; i < numReflectionPoints; i++ ) {
 			if( primaryHitDistances[i] < averageDistance + hitDistanceStdDev ) {
 				continue;
 			}
@@ -684,8 +673,8 @@ static void ENV_ComputeReverberation( src_t *src ) {
 
 	// Compute and set reverb obstruction
 
-	numPassedSecondaryRays = 0;
-	for( i = 0; i < numReflectionPoints; i++ ) {
+	unsigned numPassedSecondaryRays = 0;
+	for( unsigned i = 0; i < numReflectionPoints; i++ ) {
 		trap_Trace( &trace, reflectionPoints[i], testedListenerOrigin, vec3_origin, vec3_origin, MASK_SOLID );
 		if( trace.fraction == 1.0f && !trace.startsolid ) {
 			numPassedSecondaryRays++;
