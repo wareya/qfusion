@@ -558,7 +558,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		}
 
 		// Skip surfaces non-reflective for sounds
-		if( trace.surfFlags & ( SURF_SKY | SURF_NOIMPACT | SURF_NOMARKS | SURF_FLESH | SURF_DUST | SURF_NOSTEPS ) ) {
+		if( trace.surfFlags & ( SURF_SKY | SURF_NOIMPACT | SURF_NOMARKS | SURF_FLESH | SURF_NOSTEPS ) ) {
 			// Go even further for sky. Simulate an "absorption" of sound by the void.
 			if( trace.surfFlags & SURF_SKY ) {
 				numRaysHitSky++;
@@ -596,10 +596,10 @@ static void ENV_ComputeReverberation( src_t *src ) {
 
 	// Obviously gain should be higher for enclosed environments.
 	// Do not lower it way too hard here as it is affected by "room size factor" too
-	reverbProps->gain = 0.20f + 0.05f * averageHitFactor;
+	reverbProps->gain = 0.30f + 0.10f * averageHitFactor;
 
 	// Simulate sound absorption by the void by lowering this value compared to its default one
-	reverbProps->lateReverbGain = 1.26f - 0.26f * sqrtf( numRaysHitSky / (float)numPrimaryRays );
+	reverbProps->lateReverbGain = 1.26f - 0.16f * sqrtf( numRaysHitSky / (float)numPrimaryRays );
 
 	if( numReflectionPoints ) {
 		averageDistance /= (float)numReflectionPoints;
@@ -611,13 +611,11 @@ static void ENV_ComputeReverberation( src_t *src ) {
 
 		// Lower the density is the more metallic and distinct the reverberation is.
 		// Let enclosed and small environments have lower density.
-		reverbProps->density = 1.0f - 0.7f * ( averageHitFactor * smallRoomFactor );
+		reverbProps->density = 1.0f - 0.3f * ( averageHitFactor * smallRoomFactor );
 		// Boost the reflections gain for small rooms.
 		reverbProps->reflectionsGain = 0.05f + 0.3f * smallRoomFactor;
-		// Obviously the reflections delay should be higher for large rooms.
-		reverbProps->reflectionsDelay = 0.005f + 0.2f * averageDistanceFactor;
 		// Lower late reverb gain for large rooms/environments
-		reverbProps->lateReverbGain *= 1.0f - 0.2f * averageDistanceFactor;
+		reverbProps->lateReverbGain *= 1.0f - 0.15f * averageDistanceFactor;
 
 		// Compute the standard deviation of hit distances to cut off high outliers
 		float hitDistanceStdDev = 0.0f;
@@ -657,9 +655,11 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		// Lower the diffusion for larger enclosed environments.
 		reverbProps->diffusion = 1.0f - roomSizeFactor * averageHitFactor;
 		reverbProps->lateReverbDelay = 0.001f + 0.05f * roomSizeFactor;
-		reverbProps->decayTime = 0.45f + 1.55f * roomSizeFactor;
+		reverbProps->decayTime = 0.70f + 1.50f * roomSizeFactor;
 		// Lower gain for huge environments. Otherwise it sounds way too artificial.
-		reverbProps->gain *= 1.0f - 0.2f * roomSizeFactor;
+		reverbProps->gain *= 1.0f - 0.1f * roomSizeFactor;
+		// Obviously the reflections delay should be higher for large rooms.
+		reverbProps->reflectionsDelay = 0.005f + 0.1f * roomSizeFactor;
 	} else {
 		// The gain is very low for zero reflections point so it should not be weird if an environment differs.
 		reverbProps->gain = 0.0f;
