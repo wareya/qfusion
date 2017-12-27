@@ -506,7 +506,22 @@ static void ENV_ComputeDirectObstruction( src_t *src ) {
 	envProps->directObstruction = 1.0f - 0.9f * ( numPassedRays / (float)numTestedRays );
 }
 
-#define REVERB_SAMPLING_ENVIRONMENT_DISTANCE_LIMIT ( 4096.0f )
+#define REVERB_ENV_DISTANCE_THRESHOLD ( 2048.0f + 512.0f )
+
+// Do not even bother casting rays 999999 units ahead for very attenuated sources.
+// However, clamp/normalize the hit distance using the same defined threshold
+static inline float ENV_SamplingEmissionRadius( src_t *src ) {
+	float attenuation = src->attenuation;
+
+	if( attenuation <= 1.0f ) {
+		return 999999.9f;
+	}
+
+	clamp_high( attenuation, 10.0f );
+	float distance = 4.0f * REVERB_ENV_DISTANCE_THRESHOLD;
+	distance -= 3.5f * SQRTFAST( attenuation / 10.0f ) * REVERB_ENV_DISTANCE_THRESHOLD;
+	return distance;
+}
 
 static void ENV_ComputeReverberation( src_t *src ) {
 	trace_t trace;
@@ -516,8 +531,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	vec3_t testedListenerOrigin;
 	envUpdateState_t *updateState;
 	reverbProps_t *reverbProps;
-	float distanceLimit, distance, squareDistance, averageDistance;
-	float primaryEmissionRadius;
+	float squareDistance, averageDistance;
 	float averageHitFactor;
 	unsigned numPrimaryRays, numRaysHitSky, numReflectionPoints;
 	unsigned numPassedSecondaryRays;
@@ -529,18 +543,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	VectorCopy( oldListenerOrigin, testedListenerOrigin );
 	testedListenerOrigin[2] += 18.0f;
 
-	distanceLimit = REVERB_SAMPLING_ENVIRONMENT_DISTANCE_LIMIT;
-	distanceLimit -= ( 0.75f * REVERB_SAMPLING_ENVIRONMENT_DISTANCE_LIMIT ) * ( src->attenuation / 15.0f );
-	assert( distanceLimit <= REVERB_SAMPLING_ENVIRONMENT_DISTANCE_LIMIT );
-	clamp_low( distanceLimit, 1024.0f );
-
-	squareDistance = DistanceSquared( testedListenerOrigin, src->origin );
-	if( squareDistance < 32.0f * 32.0f ) {
-		primaryEmissionRadius = distanceLimit;
-	} else {
-		distance = sqrtf( squareDistance );
-		primaryEmissionRadius = max( distance, distanceLimit );
-	}
+	const float primaryEmissionRadius = ENV_SamplingEmissionRadius( src );
 
 	ENV_SetupSamplingProps( &updateState->reverbPrimaryRaysSamplingProps, 16, MAX_REVERB_PRIMARY_RAY_SAMPLES );
 
@@ -584,13 +587,13 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		VectorAdd( trace.endpos, reflectionPoint, reflectionPoint );
 
 		squareDistance = DistanceSquared( src->origin, trace.endpos );
-		if( squareDistance < distanceLimit * distanceLimit ) {
+		if( squareDistance < REVERB_ENV_DISTANCE_THRESHOLD * REVERB_ENV_DISTANCE_THRESHOLD ) {
 			primaryHitDistances[numReflectionPoints] = sqrtf( squareDistance );
 		} else {
-			primaryHitDistances[numReflectionPoints] = distanceLimit;
+			primaryHitDistances[numReflectionPoints] = REVERB_ENV_DISTANCE_THRESHOLD;
 		}
 		assert( primaryHitDistances[numReflectionPoints] >= 0.0f );
-		assert( primaryHitDistances[numReflectionPoints] <= distanceLimit );
+		assert( primaryHitDistances[numReflectionPoints] <= REVERB_ENV_DISTANCE_THRESHOLD );
 		averageDistance += primaryHitDistances[numReflectionPoints];
 
 		numReflectionPoints++;
@@ -611,7 +614,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		unsigned numPassedSigmaTestPoints;
 
 		averageDistance /= (float)numReflectionPoints;
-		averageDistanceFactor = averageDistance / REVERB_SAMPLING_ENVIRONMENT_DISTANCE_LIMIT;
+		averageDistanceFactor = averageDistance / REVERB_ENV_DISTANCE_THRESHOLD;
 		assert( averageDistanceFactor >= 0.0f && averageDistanceFactor <= 1.0f );
 
 		// This value is just an optimized intermediate result, does not have much sense being taken alone.
@@ -643,7 +646,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 			if( primaryHitDistances[i] < averageDistance + hitDistanceStdDev ) {
 				continue;
 			}
-			roomSizeFactor += sqrtf( primaryHitDistances[i] / distanceLimit );
+			roomSizeFactor += sqrtf( primaryHitDistances[i] / REVERB_ENV_DISTANCE_THRESHOLD );
 			numPassedSigmaTestPoints++;
 		}
 
