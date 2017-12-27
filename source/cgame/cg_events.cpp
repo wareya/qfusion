@@ -1350,7 +1350,7 @@ void CG_EntityEvent( entity_state_t *ent, int ev, int parm, bool predicted ) {
 			CG_BulletExplosion( ent->origin, dir, NULL );
 			CG_ParticleEffect( ent->origin, dir, 1.0f, 0.67f, 0.0f, 6 );
 			trap_S_StartFixedSound( CG_MediaSfx( cgs.media.sfxRic[rand() % 2] ), ent->origin, CHAN_AUTO,
-									cg_volume_effects->value, ATTN_STATIC );
+									cg_volume_effects->value, ATTN_IDLE );
 			break;
 
 		case EV_LASER_SPARKS:
