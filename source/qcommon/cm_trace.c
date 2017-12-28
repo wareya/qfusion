@@ -29,10 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 * can just be stored out and get a proper clipping hull structure.
 */
 void CM_InitBoxHull( cmodel_state_t *cms ) {
-	int i;
-	cplane_t *p;
-	cbrushside_t *s;
-
 	cms->box_brush->numsides = 6;
 	cms->box_brush->brushsides = cms->box_brushsides;
 	cms->box_brush->contents = CONTENTS_BODY;
@@ -48,14 +44,12 @@ void CM_InitBoxHull( cmodel_state_t *cms ) {
 	cms->box_cmodel->markbrushes = cms->box_markbrushes;
 	cms->box_cmodel->nummarkbrushes = 1;
 
-	for( i = 0; i < 6; i++ ) {
+	for( int i = 0; i < 6; i++ ) {
 		// brush sides
-		s = cms->box_brushsides + i;
-		s->plane = cms->box_planes[i];
-		s->surfFlags = 0;
+		cbrushside_t *s = cms->box_brushsides + i;
 
 		// planes
-		p = &cms->box_planes[i];
+		cplane_t tmp, *p = &tmp;
 		VectorClear( p->normal );
 
 		if( ( i & 1 ) ) {
@@ -67,6 +61,10 @@ void CM_InitBoxHull( cmodel_state_t *cms ) {
 			p->normal[i >> 1] = 1;
 			p->signbits = 0;
 		}
+
+		p->dist = 0;
+		CM_CopyRawToCMPlane( p, &s->plane );
+		s->surfFlags = 0;
 	}
 }
 
@@ -77,9 +75,6 @@ void CM_InitBoxHull( cmodel_state_t *cms ) {
 * can just be stored out and get a proper clipping hull structure.
 */
 void CM_InitOctagonHull( cmodel_state_t *cms ) {
-	int i;
-	cplane_t *p;
-	cbrushside_t *s;
 	const vec3_t oct_dirs[4] = {
 		{  1,  1, 0 },
 		{ -1,  1, 0 },
@@ -103,14 +98,12 @@ void CM_InitOctagonHull( cmodel_state_t *cms ) {
 	cms->oct_cmodel->nummarkbrushes = 1;
 
 	// axial planes
-	for( i = 0; i < 6; i++ ) {
+	for( int i = 0; i < 6; i++ ) {
 		// brush sides
-		s = cms->oct_brushsides + i;
-		s->plane = cms->oct_planes[i];
-		s->surfFlags = 0;
+		cbrushside_t *s = cms->oct_brushsides + i;
 
 		// planes
-		p = &cms->oct_planes[i];
+		cplane_t tmp, *p = &tmp;
 		VectorClear( p->normal );
 
 		if( ( i & 1 ) ) {
@@ -122,21 +115,27 @@ void CM_InitOctagonHull( cmodel_state_t *cms ) {
 			p->normal[i >> 1] = 1;
 			p->signbits = 0;
 		}
+
+		p->dist = 0;
+		CM_CopyRawToCMPlane( p, &s->plane );
+		s->surfFlags = 0;
 	}
 
 	// non-axial planes
-	for( i = 6; i < 10; i++ ) {
+	for( int i = 6; i < 10; i++ ) {
 		// brush sides
-		s = cms->oct_brushsides + i;
-		s->plane = cms->oct_planes[i];
-		s->surfFlags = 0;
+		cbrushside_t *s = cms->oct_brushsides + i;
 
 		// planes
-		p = &cms->oct_planes[i];
+		cplane_t tmp, *p = &tmp;
 		VectorCopy( oct_dirs[i - 6], p->normal );
 
 		p->type = PLANE_NONAXIAL;
 		p->signbits = SignbitsForPlane( p );
+
+		p->dist = 0;
+		CM_CopyRawToCMPlane( p, &s->plane );
+		s->surfFlags = 0;
 	}
 }
 
@@ -146,12 +145,13 @@ void CM_InitOctagonHull( cmodel_state_t *cms ) {
 * To keep everything totally uniform, bounding boxes are turned into inline models
 */
 cmodel_t *CM_ModelForBBox( cmodel_state_t *cms, vec3_t mins, vec3_t maxs ) {
-	cms->box_planes[0].dist = maxs[0];
-	cms->box_planes[1].dist = -mins[0];
-	cms->box_planes[2].dist = maxs[1];
-	cms->box_planes[3].dist = -mins[1];
-	cms->box_planes[4].dist = maxs[2];
-	cms->box_planes[5].dist = -mins[2];
+	cbrushside_t *sides = cms->box_brush->brushsides;
+	sides[0].plane.dist = maxs[0];
+	sides[1].plane.dist = -mins[0];
+	sides[2].plane.dist = maxs[1];
+	sides[3].plane.dist = -mins[1];
+	sides[4].plane.dist = maxs[2];
+	sides[5].plane.dist = -mins[2];
 
 	VectorCopy( mins, cms->box_cmodel->mins );
 	VectorCopy( maxs, cms->box_cmodel->maxs );
@@ -181,12 +181,13 @@ cmodel_t *CM_OctagonModelForBBox( cmodel_state_t *cms, vec3_t mins, vec3_t maxs 
 	VectorCopy( size[0], cms->oct_cmodel->mins );
 	VectorCopy( size[1], cms->oct_cmodel->maxs );
 
-	cms->oct_planes[0].dist = size[1][0];
-	cms->oct_planes[1].dist = -size[0][0];
-	cms->oct_planes[2].dist = size[1][1];
-	cms->oct_planes[3].dist = -size[0][1];
-	cms->oct_planes[4].dist = size[1][2];
-	cms->oct_planes[5].dist = -size[0][2];
+	cbrushside_t *sides = cms->oct_brush->brushsides;
+	sides[0].plane.dist = size[1][0];
+	sides[1].plane.dist = -size[0][0];
+	sides[2].plane.dist = size[1][1];
+	sides[3].plane.dist = -size[0][1];
+	sides[4].plane.dist = size[1][2];
+	sides[5].plane.dist = -size[0][2];
 
 	a = size[1][0]; // halfx
 	b = size[1][1]; // halfy
@@ -206,17 +207,17 @@ cmodel_t *CM_OctagonModelForBBox( cmodel_state_t *cms, vec3_t mins, vec3_t maxs 
 
 	// the following should match normals and signbits set in CM_InitOctagonHull
 
-	VectorSet( cms->oct_planes[6].normal, cosa, sina, 0 );
-	cms->oct_planes[6].dist = d;
+	VectorSet( sides[6].plane.normal, cosa, sina, 0 );
+	sides[6].plane.dist = d;
 
-	VectorSet( cms->oct_planes[7].normal, -cosa, sina, 0 );
-	cms->oct_planes[7].dist = d;
+	VectorSet( sides[7].plane.normal, -cosa, sina, 0 );
+	sides[7].plane.dist = d;
 
-	VectorSet( cms->oct_planes[8].normal, -cosa, -sina, 0 );
-	cms->oct_planes[8].dist = d;
+	VectorSet( sides[8].plane.normal, -cosa, -sina, 0 );
+	sides[8].plane.dist = d;
 
-	VectorSet( cms->oct_planes[9].normal, cosa, -sina, 0 );
-	cms->oct_planes[9].dist = d;
+	VectorSet( sides[9].plane.normal, cosa, -sina, 0 );
+	sides[9].plane.dist = d;
 
 	return cms->oct_cmodel;
 }
@@ -458,6 +459,10 @@ typedef struct {
 	vec_bounds_t absmins, absmaxs;
 	vec3_t extents;
 
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	__m128 xmmClipBoxLookup[16];
+#endif
+
 	int contents;
 	bool ispoint;      // optimized case
 } traceLocal_t;
@@ -466,74 +471,102 @@ typedef struct {
 * CM_ClipBoxToBrush
 */
 static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t *brush ) {
-	int i;
-	cplane_t *p, *clipplane;
-	float enterfrac, leavefrac;
-	float d1, d2, f;
-	bool getout, startout;
+	cm_plane_t *p, *clipplane;
 	cbrushside_t *side, *leadside;
+	float d1, d2, f;
+
+	c_brush_traces++;
 
 	if( !brush->numsides ) {
 		return;
 	}
 
-	enterfrac = -1;
-	leavefrac = 1;
+	float enterfrac = -1;
+	float leavefrac = 1;
 	clipplane = NULL;
 
-	c_brush_traces++;
-
-	getout = false;
-	startout = false;
+	bool getout = false;
+	bool startout = false;
 	leadside = NULL;
 	side = brush->brushsides;
 
-	for( i = 0; i < brush->numsides; i++, side++ ) {
+#if !( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	// Do not even bother of making these local aliases for SSE code.
+	const float *startmins = tlc->startmins;
+	const float *startmaxs = tlc->startmaxs;
+	const float *endmins = tlc->endmins;
+	const float *endmaxs = tlc->endmaxs;
+#endif
+
+	for( int i = 0, end = brush->numsides; i < end; i++, side++ ) {
 		p = &side->plane;
+		int type = p->type;
+		float dist = p->dist;
 
 		// push the plane out apropriately for mins/maxs
-		if( p->type < 3 ) {
-			d1 = tlc->startmins[p->type] - p->dist;
-			d2 = tlc->endmins[p->type] - p->dist;
+		if( type < 3 ) {
+			d1 = startmins[type] - dist;
+			d2 = endmins[type] - dist;
 		} else {
-			switch( p->signbits ) {
+#if !( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+			// It has been proven that using a switch is cheaper than using a LUT like in SIMD approach
+			const float *normal = p->normal;
+			switch( p->signbits & 7 ) {
 				case 0:
-					d1 = p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmins[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmins[0] + p->normal[1] * tlc->endmins[1] + p->normal[2] * tlc->endmins[2] - p->dist;
+					d1 = normal[0] * startmins[0] + normal[1] * startmins[1] + normal[2] * startmins[2] - dist;
+					d2 = normal[0] * endmins[0] + normal[1] * endmins[1] + normal[2] * endmins[2] - dist;
 					break;
 				case 1:
-					d1 = p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmins[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmaxs[0] + p->normal[1] * tlc->endmins[1] + p->normal[2] * tlc->endmins[2] - p->dist;
+					d1 = normal[0] * startmaxs[0] + normal[1] * startmins[1] + normal[2] * startmins[2] - dist;
+					d2 = normal[0] * endmaxs[0] + normal[1] * endmins[1] + normal[2] * endmins[2] - dist;
 					break;
 				case 2:
-					d1 = p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmins[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmins[0] + p->normal[1] * tlc->endmaxs[1] + p->normal[2] * tlc->endmins[2] - p->dist;
+					d1 = normal[0] * startmins[0] + normal[1] * startmaxs[1] + normal[2] * startmins[2] - dist;
+					d2 = normal[0] * endmins[0] + normal[1] * endmaxs[1] + normal[2] * endmins[2] - dist;
 					break;
 				case 3:
-					d1 = p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmins[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmaxs[0] + p->normal[1] * tlc->endmaxs[1] + p->normal[2] * tlc->endmins[2] - p->dist;
+					d1 = normal[0] * startmaxs[0] + normal[1] * startmaxs[1] + normal[2] * startmins[2] - dist;
+					d2 = normal[0] * endmaxs[0] + normal[1] * endmaxs[1] + normal[2] * endmins[2] - dist;
 					break;
 				case 4:
-					d1 = p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmaxs[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmins[0] + p->normal[1] * tlc->endmins[1] + p->normal[2] * tlc->endmaxs[2] - p->dist;
+					d1 = normal[0] * startmins[0] + normal[1] * startmins[1] + normal[2] * startmaxs[2] - dist;
+					d2 = normal[0] * endmins[0] + normal[1] * endmins[1] + normal[2] * endmaxs[2] - dist;
 					break;
 				case 5:
-					d1 = p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmaxs[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmaxs[0] + p->normal[1] * tlc->endmins[1] + p->normal[2] * tlc->endmaxs[2] - p->dist;
+					d1 = normal[0] * startmaxs[0] + normal[1] * startmins[1] + normal[2] * startmaxs[2] - dist;
+					d2 = normal[0] * endmaxs[0] + normal[1] * endmins[1] + normal[2] * endmaxs[2] - dist;
 					break;
 				case 6:
-					d1 = p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmaxs[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmins[0] + p->normal[1] * tlc->endmaxs[1] + p->normal[2] * tlc->endmaxs[2] - p->dist;
+					d1 = normal[0] * startmins[0] + normal[1] * startmaxs[1] + normal[2] * startmaxs[2] - dist;
+					d2 = normal[0] * endmins[0] + normal[1] * endmaxs[1] + normal[2] * endmaxs[2] - dist;
 					break;
 				case 7:
-					d1 = p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmaxs[2] - p->dist;
-					d2 = p->normal[0] * tlc->endmaxs[0] + p->normal[1] * tlc->endmaxs[1] + p->normal[2] * tlc->endmaxs[2] - p->dist;
+					d1 = normal[0] * startmaxs[0] + normal[1] * startmaxs[1] + normal[2] * startmaxs[2] - dist;
+					d2 = normal[0] * endmaxs[0] + normal[1] * endmaxs[1] + normal[2] * endmaxs[2] - dist;
 					break;
 				default:
 					d1 = d2 = 0; // shut up compiler
 					assert( 0 );
 					break;
 			}
+#else
+			// It looks ugly but its better to inline two "DotProductSSE" calls to group similar ops together
+			__m128 *lookup = tlc->xmmClipBoxLookup + p->signbits * 2;
+			__m128 xmmNormal = _mm_loadu_ps( p->normal );
+			__m128 xmmDot1 = _mm_mul_ps( lookup[0], xmmNormal );
+			__m128 xmmDot2 = _mm_mul_ps( lookup[1], xmmNormal );
+			// https://stackoverflow.com/a/35270026
+			__m128 xmmShuf1 = _mm_movehdup_ps( xmmDot1 );    // broadcast elements 3,1 to 2,0
+			__m128 xmmShuf2 = _mm_movehdup_ps( xmmDot2 );
+			__m128 xmmSums1 = _mm_add_ps( xmmDot1, xmmShuf1 );
+			__m128 xmmSums2 = _mm_add_ps( xmmDot2, xmmShuf2 );
+			xmmShuf1 = _mm_movehl_ps( xmmShuf1, xmmSums1 );          // high half -> low half
+			xmmShuf2 = _mm_movehl_ps( xmmShuf2, xmmSums2 );
+			xmmSums1 = _mm_add_ss( xmmSums1, xmmShuf1 );
+			xmmSums2 = _mm_add_ss( xmmSums2, xmmShuf2 );
+			d1 = _mm_cvtss_f32( xmmSums1 ) - dist;
+			d2 = _mm_cvtss_f32( xmmSums2 ) - dist;
+#endif
 		}
 
 		if( d2 > 0 ) {
@@ -583,7 +616,7 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 				enterfrac = 0;
 			}
 			tlc->trace->fraction = enterfrac;
-			tlc->trace->plane = *clipplane;
+			CM_CopyCMToRawPlane( clipplane, &tlc->trace->plane );
 			tlc->trace->surfFlags = leadside->surfFlags;
 			tlc->trace->contents = brush->contents;
 		}
@@ -595,62 +628,67 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 */
 static void CM_TestBoxInBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t *brush ) {
 	int i;
-	cplane_t *p;
+	cm_plane_t *p;
 	cbrushside_t *side;
 
 	if( !brush->numsides ) {
 		return;
 	}
 
+	const float *startmins = tlc->startmins;
+	const float *startmaxs = tlc->startmaxs;
+
 	side = brush->brushsides;
 	for( i = 0; i < brush->numsides; i++, side++ ) {
 		p = &side->plane;
+		int type = p->type;
 
 		// push the plane out appropriately for mins/maxs
 		// if completely in front of face, no intersection
-		if( p->type < 3 ) {
-			if( tlc->startmins[p->type] > p->dist ) {
+		if( type < 3 ) {
+			if( startmins[type] > p->dist ) {
 				return;
 			}
 		} else {
-			switch( p->signbits ) {
+			const float *normal = p->normal;
+			switch( p->signbits & 7 ) {
 				case 0:
-					if( p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmins[2] > p->dist ) {
+					if( normal[0] * startmins[0] + normal[1] * startmins[1] + normal[2] * startmins[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 1:
-					if( p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmins[2] > p->dist ) {
+					if( normal[0] * startmaxs[0] + normal[1] * startmins[1] + normal[2] * startmins[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 2:
-					if( p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmins[2] > p->dist ) {
+					if( normal[0] * startmins[0] + normal[1] * startmaxs[1] + normal[2] * startmins[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 3:
-					if( p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmins[2] > p->dist ) {
+					if( normal[0] * startmaxs[0] + normal[1] * startmaxs[1] + normal[2] * startmins[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 4:
-					if( p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmaxs[2] > p->dist ) {
+					if( normal[0] * startmins[0] + normal[1] * startmins[1] + normal[2] * startmaxs[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 5:
-					if( p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmins[1] + p->normal[2] * tlc->startmaxs[2] > p->dist ) {
+					if( normal[0] * startmaxs[0] + normal[1] * startmins[1] + normal[2] * startmaxs[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 6:
-					if( p->normal[0] * tlc->startmins[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmaxs[2] > p->dist ) {
+					if( normal[0] * startmins[0] + normal[1] * startmaxs[1] + normal[2] * startmaxs[2] > p->dist ) {
 						return;
 					}
 					break;
 				case 7:
-					if( p->normal[0] * tlc->startmaxs[0] + p->normal[1] * tlc->startmaxs[1] + p->normal[2] * tlc->startmaxs[2] > p->dist ) {
+					if( normal[0] * startmaxs[0] + normal[1] * startmaxs[1] + normal[2] * startmaxs[2] > p->dist ) {
 						return;
 					}
 					break;
@@ -862,12 +900,43 @@ loc0:
 
 //======================================================================
 
+static void CM_FillClipBoxLookup( traceLocal_t *tlc ) {
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	// Note: Using setR is important here, otherwise components order is ... surprising
+	// (We're going to compute dot products with vectors loaded via _mm_loadu_ps that preserve array elements order)
+
+	tlc->xmmClipBoxLookup[0] = _mm_setr_ps( tlc->startmins[0], tlc->startmins[1], tlc->startmins[2], 0 );
+	tlc->xmmClipBoxLookup[1] = _mm_setr_ps( tlc->endmins[0], tlc->endmins[1], tlc->endmins[2], 0 );
+
+	tlc->xmmClipBoxLookup[2] = _mm_setr_ps( tlc->startmaxs[0], tlc->startmins[1], tlc->startmins[2], 0 );
+	tlc->xmmClipBoxLookup[3] = _mm_setr_ps( tlc->endmaxs[0], tlc->endmins[1], tlc->endmins[2], 0 );
+
+	tlc->xmmClipBoxLookup[4] = _mm_setr_ps( tlc->startmins[0], tlc->startmaxs[1], tlc->startmins[2], 0 );
+	tlc->xmmClipBoxLookup[5] = _mm_setr_ps( tlc->endmins[0], tlc->endmaxs[1], tlc->endmins[2], 0 );
+
+	tlc->xmmClipBoxLookup[6] = _mm_setr_ps( tlc->startmaxs[0], tlc->startmaxs[1], tlc->startmins[2], 0 );
+	tlc->xmmClipBoxLookup[7] = _mm_setr_ps( tlc->endmaxs[0], tlc->endmaxs[1], tlc->endmins[2], 0 );
+
+	tlc->xmmClipBoxLookup[8] = _mm_setr_ps( tlc->startmins[0], tlc->startmins[1], tlc->startmaxs[2], 0 );
+	tlc->xmmClipBoxLookup[9] = _mm_setr_ps( tlc->endmins[0], tlc->endmins[1], tlc->endmaxs[2], 0 );
+
+	tlc->xmmClipBoxLookup[10] = _mm_setr_ps( tlc->startmaxs[0], tlc->startmins[1], tlc->startmaxs[2], 0 );
+	tlc->xmmClipBoxLookup[11] = _mm_setr_ps( tlc->endmaxs[0], tlc->endmins[1], tlc->endmaxs[2], 0 );
+
+	tlc->xmmClipBoxLookup[12] = _mm_setr_ps( tlc->startmins[0], tlc->startmaxs[1], tlc->startmaxs[2], 0 );
+	tlc->xmmClipBoxLookup[13] = _mm_setr_ps( tlc->endmins[0], tlc->endmaxs[1], tlc->endmaxs[2], 0 );
+
+	tlc->xmmClipBoxLookup[14] = _mm_setr_ps( tlc->startmaxs[0], tlc->startmaxs[1], tlc->startmaxs[2], 0 );
+	tlc->xmmClipBoxLookup[15] = _mm_setr_ps( tlc->endmaxs[0], tlc->endmaxs[1], tlc->endmaxs[2], 0 );
+#endif
+}
+
 /*
 * CM_BoxTrace
 */
 static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs,
 						 cmodel_t *cmodel, vec3_t origin, int brushmask ) {
-	traceLocal_t tlc;
+	ATTRIBUTE_ALIGNED( 16 ) traceLocal_t tlc;
 	bool notworld;
 
 	notworld = ( cmodel != cms->map_cmodels ? true : false );
@@ -942,6 +1011,8 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 		VectorCopy( start, tr->endpos );
 		return;
 	}
+
+	CM_FillClipBoxLookup( &tlc );
 
 	//
 	// check for point special case

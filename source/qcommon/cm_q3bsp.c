@@ -283,10 +283,9 @@ static void CM_CreatePatch( cmodel_state_t *cms, cface_t *patch, cshaderref_t *s
 
 			for( j = 0, s = facet->brushsides; j < facet->numsides; j++, s++ ) {
 				planes[j] = brushplanes[k++];
-
-				s->plane = planes[j];
-				SnapPlane( s->plane.normal, &s->plane.dist );
-				CategorizePlane( &s->plane );
+				SnapPlane( planes[j].normal, &planes[j].dist );
+				CategorizePlane( &planes[j] );
+				CM_CopyRawToCMPlane( &planes[j], &s->plane );
 				s->surfFlags = shaderref->flags;
 			}
 		}
@@ -767,7 +766,7 @@ static void CMod_LoadBrushSides( cmodel_state_t *cms, lump_t *l ) {
 	cms->numbrushsides = count;
 
 	for( i = 0; i < count; i++, in++, out++ ) {
-		out->plane = cms->map_planes[LittleLong( in->planenum )];
+		CM_CopyRawToCMPlane( cms->map_planes + LittleLong( in->planenum ), &out->plane );
 		j = LittleLong( in->shadernum );
 		if( j >= cms->numshaderrefs ) {
 			Com_Error( ERR_DROP, "Bad brushside texinfo" );
@@ -798,7 +797,7 @@ static void CMod_LoadBrushSides_RBSP( cmodel_state_t *cms, lump_t *l ) {
 	cms->numbrushsides = count;
 
 	for( i = 0; i < count; i++, in++, out++ ) {
-		out->plane = cms->map_planes[LittleLong( in->planenum )];
+		CM_CopyRawToCMPlane( cms->map_planes + LittleLong( in->planenum ), &out->plane );
 		j = LittleLong( in->shadernum );
 		if( j >= cms->numshaderrefs ) {
 			Com_Error( ERR_DROP, "Bad brushside texinfo" );

@@ -39,8 +39,19 @@ typedef struct {
 	int children[2];            // negative numbers are leafs
 } cnode_t;
 
+#ifdef QF_SSE4
 typedef struct {
-	cplane_t plane;
+	vec4_t normal;
+	float dist;
+	short type;                 // for fast side tests
+	short signbits;             // signx + (signy<<1) + (signz<<1)
+} cm_plane_t;
+#else
+typedef cplane_t cm_plane_t;
+#endif
+
+typedef struct {
+	cm_plane_t plane;
 	int surfFlags;
 } cbrushside_t;
 
@@ -183,13 +194,11 @@ struct cmodel_state_s {
 	uint8_t *cmod_base;
 
 	// cm_trace.c
-	cplane_t box_planes[6];
 	cbrushside_t box_brushsides[6];
 	cbrush_t box_brush[1];
 	cbrush_t *box_markbrushes[1];
 	cmodel_t box_cmodel[1];
 
-	cplane_t oct_planes[10];
 	cbrushside_t oct_brushsides[10];
 	cbrush_t oct_brush[1];
 	cbrush_t *oct_markbrushes[1];
@@ -222,3 +231,21 @@ inline void CM_SetUnusedBoundsComponents( vec_bounds_t mins, vec_bounds_t maxs )
 	maxs[3] = 1;
 #endif
 }
+
+static inline void CM_CopyRawToCMPlane( const cplane_t *src, cm_plane_t *dest ) {
+	VectorCopy( src->normal, dest->normal );
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	dest->normal[3] = 0;
+#endif
+	dest->dist = src->dist;
+	dest->type = src->type;
+	dest->signbits = src->signbits;
+}
+
+static inline void CM_CopyCMToRawPlane( const cm_plane_t *src, cplane_t *dest ) {
+	VectorCopy( src->normal, dest->normal );
+	dest->dist = src->dist;
+	dest->type = src->type;
+	dest->signbits = src->signbits;
+}
+
