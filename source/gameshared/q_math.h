@@ -213,8 +213,30 @@ void AddPointToBounds( const vec3_t v, vec3_t mins, vec3_t maxs );
 float RadiusFromBounds( const vec3_t mins, const vec3_t maxs );
 
 inline bool BoundsIntersect( const vec3_t mins1, const vec3_t maxs1, const vec3_t mins2, const vec3_t maxs2 ) {
+	// Though collision code is likely to use its own BoundsIntersect() version
+	// optimized even further, this code is fine too for the rest of the code base
+
+#ifndef QF_SSE2
 	return (bool)( mins1[0] <= maxs2[0] && mins1[1] <= maxs2[1] && mins1[2] <= maxs2[2] &&
 				   maxs1[0] >= mins2[0] && maxs1[1] >= mins2[1] && maxs1[2] >= mins2[2] );
+
+#else
+	__m128 xmmMins1 = _mm_set_ps( mins1[0], mins1[1], mins1[2], 0 );
+	__m128 xmmMaxs1 = _mm_set_ps( maxs1[0], maxs1[1], maxs1[2], 1 );
+	__m128 xmmMins2 = _mm_set_ps( mins2[0], mins2[1], mins2[2], 0 );
+	__m128 xmmMaxs2 = _mm_set_ps( maxs2[0], maxs2[1], maxs2[2], 1 );
+
+	__m128 cmp1 = _mm_cmpge_ps( xmmMins1, xmmMaxs2 );
+	__m128 cmp2 = _mm_cmpge_ps( xmmMins2, xmmMaxs1 );
+	__m128 orCmp = _mm_or_ps( cmp1, cmp2 );
+
+#ifdef QF_SSE4_1
+	return (bool)_mm_testz_ps( orCmp, orCmp );
+#else
+	return _mm_movemask_epi8( _mm_cmpeq_epi32( (__m128i)orCmp, _mm_setzero_si128() ) ) == 0xFFFF;
+#endif
+
+#endif
 }
 
 bool BoundsAndSphereIntersect( const vec3_t mins, const vec3_t maxs, const vec3_t centre, float radius );
