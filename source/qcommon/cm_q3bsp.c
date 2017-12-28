@@ -182,6 +182,8 @@ static int CM_CreateFacetFromPoints( cmodel_state_t *cms, cbrush_t *facet, vec3_
 		facet->maxs[i] += 1.0f;
 	}
 
+	CM_SetUnusedBoundsComponents( facet->mins, facet->maxs );
+
 	return ( facet->numsides = numbrushplanes );
 }
 
@@ -296,6 +298,8 @@ static void CM_CreatePatch( cmodel_state_t *cms, cface_t *patch, cshaderref_t *s
 			patch->mins[i] -= 1;
 			patch->maxs[i] += 1;
 		}
+
+		CM_SetUnusedBoundsComponents( patch->mins, patch->maxs );
 	}
 
 	Mem_Free( points );
@@ -916,4 +920,6 @@ void CM_BoundBrush( cmodel_state_t *cms, cbrush_t *brush ) {
 		brush->mins[i] = -brush->brushsides[i * 2 + 0].plane.dist;
 		brush->maxs[i] = +brush->brushsides[i * 2 + 1].plane.dist;
 	}
+
+	CM_SetUnusedBoundsComponents( brush->mins, brush->maxs );
 }

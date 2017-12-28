@@ -455,7 +455,7 @@ typedef struct {
 	vec3_t mins, maxs;
 	vec3_t startmins, endmins;
 	vec3_t startmaxs, endmaxs;
-	vec3_t absmins, absmaxs;
+	vec_bounds_t absmins, absmaxs;
 	vec3_t extents;
 
 	int contents;
@@ -667,6 +667,31 @@ static void CM_TestBoxInBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	tlc->trace->contents = brush->contents;
 }
 
+static inline bool CM_BoundsIntersect( const vec_bounds_t mins1, const vec_bounds_t maxs1,
+									   const vec_bounds_t mins2, const vec_bounds_t maxs2 ) {
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	// A specialized version of BoundsIntersect() that assumes 4-th vector components to be feasible mins/maxs
+	// This version relies on fast unaligned loads, that's why it requires SSE4.
+	__m128 xmmMins1 = _mm_loadu_ps( mins1 );
+	__m128 xmmMaxs1 = _mm_loadu_ps( maxs1 );
+	__m128 xmmMins2 = _mm_loadu_ps( mins2 );
+	__m128 xmmMaxs2 = _mm_loadu_ps( maxs2 );
+
+	__m128 cmp1 = _mm_cmpge_ps( xmmMins1, xmmMaxs2 );
+	__m128 cmp2 = _mm_cmpge_ps( xmmMins2, xmmMaxs1 );
+	__m128 orCmp = _mm_or_ps( cmp1, cmp2 );
+
+#ifdef QF_SSE4_1
+	return (bool)_mm_testz_ps( orCmp, orCmp );
+#else
+	return _mm_movemask_epi8( _mm_cmpeq_epi32( (__m128i)orCmp, _mm_setzero_si128() ) ) == 0xFFFF;
+#endif
+
+#else
+	return BoundsIntersect( mins1, maxs1, mins2, maxs2 );
+#endif
+}
+
 /*
 * CM_CollideBox
 */
@@ -689,7 +714,7 @@ static void CM_CollideBox( cmodel_state_t *cms, traceLocal_t *tlc,
 		if( !( b->contents & tlc->contents ) ) {
 			continue;
 		}
-		if( !BoundsIntersect( b->mins, b->maxs, tlc->absmins, tlc->absmaxs ) ) {
+		if( !CM_BoundsIntersect( b->mins, b->maxs, tlc->absmins, tlc->absmaxs ) ) {
 			continue;
 		}
 		func( cms, tlc, b );
@@ -708,12 +733,12 @@ static void CM_CollideBox( cmodel_state_t *cms, traceLocal_t *tlc,
 		if( !( patch->contents & tlc->contents ) ) {
 			continue;
 		}
-		if( !BoundsIntersect( patch->mins, patch->maxs, tlc->absmins, tlc->absmaxs ) ) {
+		if( !CM_BoundsIntersect( patch->mins, patch->maxs, tlc->absmins, tlc->absmaxs ) ) {
 			continue;
 		}
 		facet = patch->facets;
 		for( j = 0; j < patch->numfacets; j++, facet++ ) {
-			if( !BoundsIntersect( facet->mins, facet->maxs, tlc->absmins, tlc->absmaxs ) ) {
+			if( !CM_BoundsIntersect( facet->mins, facet->maxs, tlc->absmins, tlc->absmaxs ) ) {
 				continue;
 			}
 			func( cms, tlc, facet );
@@ -878,6 +903,8 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 
 	VectorAdd( end, tlc.maxs, tlc.endmaxs );
 	AddPointToBounds( tlc.endmaxs, tlc.absmins, tlc.absmaxs );
+
+	CM_SetUnusedBoundsComponents( tlc.absmins, tlc.absmaxs );
 
 	//
 	// check for position test special case

@@ -44,10 +44,18 @@ typedef struct {
 	int surfFlags;
 } cbrushside_t;
 
+#define CM_USE_SIMD
+
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+typedef vec4_t vec_bounds_t;
+#else
+typedef vec3_t vec_bounds_t;
+#endif
+
 typedef struct {
 	cbrushside_t *brushsides;
 
-	vec3_t mins, maxs;
+	vec_bounds_t mins, maxs;
 
 	int contents;
 	int checkcount;             // to avoid repeated testings
@@ -57,7 +65,7 @@ typedef struct {
 typedef struct {
 	cbrush_t *facets;
 
-	vec3_t mins, maxs;
+	vec_bounds_t mins, maxs;
 
 	int contents;
 	int checkcount;             // to avoid repeated testings
@@ -207,3 +215,10 @@ void    CM_BoundBrush( cmodel_state_t *cms, cbrush_t *brush );
 void    CM_FloodAreaConnections( cmodel_state_t *cms );
 
 uint8_t *CM_DecompressVis( const uint8_t *in, int rowsize, uint8_t *decompressed );
+
+inline void CM_SetUnusedBoundsComponents( vec_bounds_t mins, vec_bounds_t maxs ) {
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	mins[3] = 0;
+	maxs[3] = 1;
+#endif
+}
