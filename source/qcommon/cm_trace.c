@@ -22,6 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qcommon.h"
 #include "cm_local.h"
 
+static inline void CM_SetBuiltinBrushBounds( vec_bounds_t mins, vec_bounds_t maxs ) {
+	for( int i = 0; i < sizeof( vec_bounds_t ) / sizeof( vec_t ); ++i ) {
+		mins[i] = +999999;
+		maxs[i] = -999999;
+	}
+}
+
 /*
 * CM_InitBoxHull
 *
@@ -34,7 +41,7 @@ void CM_InitBoxHull( cmodel_state_t *cms ) {
 	cms->box_brush->contents = CONTENTS_BODY;
 
 	// Make sure CM_CollideBox() will not reject the brush by its bounds
-	ClearBounds( cms->box_brush->maxs, cms->box_brush->mins );
+	CM_SetBuiltinBrushBounds( cms->box_brush->maxs, cms->box_brush->mins );
 
 	cms->box_markbrushes[0] = cms->box_brush;
 
@@ -87,7 +94,7 @@ void CM_InitOctagonHull( cmodel_state_t *cms ) {
 	cms->oct_brush->contents = CONTENTS_BODY;
 
 	// Make sure CM_CollideBox() will not reject the brush by its bounds
-	ClearBounds( cms->oct_brush->maxs, cms->oct_brush->mins );
+	CM_SetBuiltinBrushBounds( cms->oct_brush->maxs, cms->oct_brush->mins );
 
 	cms->oct_markbrushes[0] = cms->oct_brush;
 
@@ -456,10 +463,14 @@ typedef struct {
 	vec3_t mins, maxs;
 	vec3_t startmins, endmins;
 	vec3_t startmaxs, endmaxs;
-	vec_bounds_t absmins, absmaxs;
+	vec3_t absmins, absmaxs;
 	vec3_t extents;
+	vec3_t traceDir;
+	float boxRadius;
 
 #if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	__m128 xmmAbsmins, xmmAbsmaxs;
+	// TODO: Add also xmm copies of trace dir/start once line distance test is vectorized
 	__m128 xmmClipBoxLookup[16];
 #endif
 
@@ -705,18 +716,15 @@ static void CM_TestBoxInBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	tlc->trace->contents = brush->contents;
 }
 
-static inline bool CM_BoundsIntersect( const vec_bounds_t mins1, const vec_bounds_t maxs1,
-									   const vec_bounds_t mins2, const vec_bounds_t maxs2 ) {
 #if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
-	// A specialized version of BoundsIntersect() that assumes 4-th vector components to be feasible mins/maxs
+static inline bool CM_BoundsIntersect( __m128 traceAbsmins, __m128 traceAbsmaxs,
+									   const vec4_t shapeMins, const vec4_t shapeMaxs ) {
 	// This version relies on fast unaligned loads, that's why it requires SSE4.
-	__m128 xmmMins1 = _mm_loadu_ps( mins1 );
-	__m128 xmmMaxs1 = _mm_loadu_ps( maxs1 );
-	__m128 xmmMins2 = _mm_loadu_ps( mins2 );
-	__m128 xmmMaxs2 = _mm_loadu_ps( maxs2 );
+	__m128 xmmShapeMins = _mm_loadu_ps( shapeMins );
+	__m128 xmmShapeMaxs = _mm_loadu_ps( shapeMaxs );
 
-	__m128 cmp1 = _mm_cmpge_ps( xmmMins1, xmmMaxs2 );
-	__m128 cmp2 = _mm_cmpge_ps( xmmMins2, xmmMaxs1 );
+	__m128 cmp1 = _mm_cmpge_ps( xmmShapeMins, traceAbsmaxs );
+	__m128 cmp2 = _mm_cmpge_ps( traceAbsmins, xmmShapeMaxs );
 	__m128 orCmp = _mm_or_ps( cmp1, cmp2 );
 
 #ifdef QF_SSE4_1
@@ -725,8 +733,14 @@ static inline bool CM_BoundsIntersect( const vec_bounds_t mins1, const vec_bound
 	return _mm_movemask_epi8( _mm_cmpeq_epi32( (__m128i)orCmp, _mm_setzero_si128() ) ) == 0xFFFF;
 #endif
 
+}
+#endif
+
+static inline bool CM_MightCollide( const vec_bounds_t shapeMins, const vec_bounds_t shapeMaxs, const traceLocal_t *tlc ) {
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	return CM_BoundsIntersect( tlc->xmmAbsmins, tlc->xmmAbsmaxs, shapeMins, shapeMaxs );
 #else
-	return BoundsIntersect( mins1, maxs1, mins2, maxs2 );
+	return BoundsIntersect( shapeMins, shapeMaxs, tlc->absmins, tlc->absmaxs );
 #endif
 }
 
@@ -752,7 +766,7 @@ static void CM_CollideBox( cmodel_state_t *cms, traceLocal_t *tlc,
 		if( !( b->contents & tlc->contents ) ) {
 			continue;
 		}
-		if( !CM_BoundsIntersect( b->mins, b->maxs, tlc->absmins, tlc->absmaxs ) ) {
+		if( !CM_MightCollide( b->mins, b->maxs, tlc ) ) {
 			continue;
 		}
 		func( cms, tlc, b );
@@ -771,12 +785,12 @@ static void CM_CollideBox( cmodel_state_t *cms, traceLocal_t *tlc,
 		if( !( patch->contents & tlc->contents ) ) {
 			continue;
 		}
-		if( !CM_BoundsIntersect( patch->mins, patch->maxs, tlc->absmins, tlc->absmaxs ) ) {
+		if( !CM_MightCollide( patch->mins, patch->maxs, tlc ) ) {
 			continue;
 		}
 		facet = patch->facets;
 		for( j = 0; j < patch->numfacets; j++, facet++ ) {
-			if( !CM_BoundsIntersect( facet->mins, facet->maxs, tlc->absmins, tlc->absmaxs ) ) {
+			if( !CM_MightCollide( facet->mins, facet->maxs, tlc ) ) {
 				continue;
 			}
 			func( cms, tlc, facet );
@@ -787,22 +801,79 @@ static void CM_CollideBox( cmodel_state_t *cms, traceLocal_t *tlc,
 	}
 }
 
-/*
-* CM_ClipBox
-*/
-static inline void CM_ClipBox( cmodel_state_t *cms, traceLocal_t *tlc,
-							   cbrush_t **markbrushes, int nummarkbrushes,
-							   cface_t **markfaces, int nummarkfaces ) {
-	CM_CollideBox( cms, tlc, markbrushes, nummarkbrushes, markfaces, nummarkfaces, CM_ClipBoxToBrush );
+static inline bool CM_MightCollideInLeaf( const vec_bounds_t shapeMins,
+										  const vec_bounds_t shapeMaxs,
+										  const vec_bounds_t shapeCenter,
+										  float shapeRadius,
+										  const traceLocal_t *tlc ) {
+	if( !CM_MightCollide( shapeMins, shapeMaxs, tlc ) ) {
+		return false;
+	}
+
+	// TODO: Vectorize this part. This task is not completed for various reasons.
+
+	vec3_t centerToStart;
+	vec3_t proj, perp;
+
+	VectorSubtract( tlc->start, shapeCenter, centerToStart );
+	float projMagnitude = DotProduct( centerToStart, tlc->traceDir );
+	VectorScale( tlc->traceDir, projMagnitude, proj );
+	VectorSubtract( centerToStart, proj, perp );
+	float distanceThreshold = shapeRadius + tlc->boxRadius;
+	return VectorLengthSquared( perp ) <= distanceThreshold * distanceThreshold;
 }
 
-/*
-* CM_TestBox
-*/
-static inline void CM_TestBox( cmodel_state_t *cms, traceLocal_t *tlc,
-							   cbrush_t **markbrushes, int nummarkbrushes,
-							   cface_t **markfaces, int nummarkfaces ) {
-	CM_CollideBox( cms, tlc, markbrushes, nummarkbrushes, markfaces, nummarkfaces, CM_TestBoxInBrush );
+static void CM_ClipBoxToLeaf( cmodel_state_t *cms, traceLocal_t *tlc,
+							  cbrush_t **markbrushes, int nummarkbrushes,
+							  cface_t **markfaces, int nummarkfaces ) {
+	int i, j;
+	cbrush_t *b;
+	cface_t *patch;
+	cbrush_t *facet;
+
+	// trace line against all brushes
+	for( i = 0; i < nummarkbrushes; i++ ) {
+		b = markbrushes[i];
+		if( b->checkcount == cms->checkcount ) {
+			continue; // already checked this brush
+		}
+		b->checkcount = cms->checkcount;
+		if( !( b->contents & tlc->contents ) ) {
+			continue;
+		}
+		if( !CM_MightCollideInLeaf( b->mins, b->maxs, b->center, b->radius, tlc ) ) {
+			continue;
+		}
+		CM_ClipBoxToBrush( cms, tlc, b );
+		if( !tlc->trace->fraction ) {
+			return;
+		}
+	}
+
+	// trace line against all patches
+	for( i = 0; i < nummarkfaces; i++ ) {
+		patch = markfaces[i];
+		if( patch->checkcount == cms->checkcount ) {
+			continue; // already checked this patch
+		}
+		patch->checkcount = cms->checkcount;
+		if( !( patch->contents & tlc->contents ) ) {
+			continue;
+		}
+		if( !CM_MightCollideInLeaf( patch->mins, patch->maxs, patch->center, patch->radius, tlc ) ) {
+			continue;
+		}
+		facet = patch->facets;
+		for( j = 0; j < patch->numfacets; j++, facet++ ) {
+			if( !CM_MightCollideInLeaf( facet->mins, facet->maxs, facet->center, facet->radius, tlc ) ) {
+				continue;
+			}
+			CM_ClipBoxToBrush( cms, tlc, facet );
+			if( !tlc->trace->fraction ) {
+				return;
+			}
+		}
+	}
 }
 
 /*
@@ -828,7 +899,7 @@ loc0:
 
 		leaf = &cms->map_leafs[-1 - num];
 		if( leaf->contents & tlc->contents ) {
-			CM_ClipBox( cms, tlc, leaf->markbrushes, leaf->nummarkbrushes, leaf->markfaces, leaf->nummarkfaces );
+			CM_ClipBoxToLeaf( cms, tlc, leaf->markbrushes, leaf->nummarkbrushes, leaf->markfaces, leaf->nummarkfaces );
 		}
 		return;
 	}
@@ -937,9 +1008,6 @@ static void CM_FillClipBoxLookup( traceLocal_t *tlc ) {
 static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs,
 						 cmodel_t *cmodel, vec3_t origin, int brushmask ) {
 	ATTRIBUTE_ALIGNED( 16 ) traceLocal_t tlc;
-	bool notworld;
-
-	notworld = ( cmodel != cms->map_cmodels ? true : false );
 
 	cms->checkcount++;  // for multi-check avoidance
 	c_traces++;     // for statistics, may be zeroed
@@ -973,34 +1041,37 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 	VectorAdd( end, tlc.maxs, tlc.endmaxs );
 	AddPointToBounds( tlc.endmaxs, tlc.absmins, tlc.absmaxs );
 
-	CM_SetUnusedBoundsComponents( tlc.absmins, tlc.absmaxs );
+	// Always set xmm trace bounds since it is used by all code paths, leaf-optimized and generic
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+	tlc.xmmAbsmins = _mm_setr_ps( tlc.absmins[0], tlc.absmins[1], tlc.absmins[2], 0 );
+	tlc.xmmAbsmaxs = _mm_setr_ps( tlc.absmaxs[0], tlc.absmaxs[1], tlc.absmaxs[2], 1 );
+#endif
 
 	//
 	// check for position test special case
 	//
 	if( VectorCompare( start, end ) ) {
-		int leafs[1024];
-		int i, numleafs;
-		vec3_t c1, c2;
-		int topnode;
-		cleaf_t *leaf;
-
-		if( notworld ) {
+		if( cmodel != cms->map_cmodels ) {
 			if( BoundsIntersect( cmodel->mins, cmodel->maxs, tlc.absmins, tlc.absmaxs ) ) {
-				CM_TestBox( cms, &tlc, cmodel->markbrushes, cmodel->nummarkbrushes, cmodel->markfaces, cmodel->nummarkfaces );
+				CM_CollideBox( cms, &tlc, cmodel->markbrushes, cmodel->nummarkbrushes,
+							   cmodel->markfaces, cmodel->nummarkfaces, CM_TestBoxInBrush );
 			}
 		} else {
-			for( i = 0; i < 3; i++ ) {
-				c1[i] = start[i] + mins[i] - 1;
-				c2[i] = start[i] + maxs[i] + 1;
+			vec3_t boxmins, boxmaxs;
+			for( int i = 0; i < 3; i++ ) {
+				boxmins[i] = start[i] + mins[i] - 1;
+				boxmaxs[i] = start[i] + maxs[i] + 1;
 			}
 
-			numleafs = CM_BoxLeafnums( cms, c1, c2, leafs, 1024, &topnode );
-			for( i = 0; i < numleafs; i++ ) {
-				leaf = &cms->map_leafs[leafs[i]];
+			int leafs[1024];
+			int topnode;
+			int numleafs = CM_BoxLeafnums( cms, boxmins, boxmaxs, leafs, 1024, &topnode );
+			for( int i = 0; i < numleafs; i++ ) {
+				cleaf_t *leaf = &cms->map_leafs[leafs[i]];
 
 				if( leaf->contents & tlc.contents ) {
-					CM_TestBox( cms, &tlc, leaf->markbrushes, leaf->nummarkbrushes, leaf->markfaces, leaf->nummarkfaces );
+					CM_CollideBox( cms, &tlc, leaf->markbrushes, leaf->nummarkbrushes,
+								   leaf->markfaces, leaf->nummarkfaces, CM_TestBoxInBrush );
 					if( tr->allsolid ) {
 						break;
 					}
@@ -1011,8 +1082,6 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 		VectorCopy( start, tr->endpos );
 		return;
 	}
-
-	CM_FillClipBoxLookup( &tlc );
 
 	//
 	// check for point special case
@@ -1028,13 +1097,25 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 				   -mins[2] > maxs[2] ? -mins[2] : maxs[2] );
 	}
 
+	// TODO: Why do we have to prepare all these vars for all cases, otherwise platforms/movers are malfunctioning?
+	CM_FillClipBoxLookup( &tlc );
+	VectorSubtract( end, start, tlc.traceDir );
+	VectorNormalize( tlc.traceDir );
+	float squareDiameter = DistanceSquared( mins, maxs );
+	if( squareDiameter >= 2.0f ) {
+		tlc.boxRadius = 0.5f * sqrtf( squareDiameter ) + 8.0f;
+	} else {
+		tlc.boxRadius = 8.0f;
+	}
+
 	//
 	// general sweeping through world
 	//
-	if( !notworld ) {
+	if( cmodel == cms->map_cmodels ) {
 		CM_RecursiveHullCheck( cms, &tlc, 0, 0, 1, start, end );
 	} else if( BoundsIntersect( cmodel->mins, cmodel->maxs, tlc.absmins, tlc.absmaxs ) ) {
-		CM_ClipBox( cms, &tlc, cmodel->markbrushes, cmodel->nummarkbrushes, cmodel->markfaces, cmodel->nummarkfaces );
+		CM_CollideBox( cms, &tlc, cmodel->markbrushes, cmodel->nummarkbrushes,
+					   cmodel->markfaces, cmodel->nummarkfaces, CM_ClipBoxToBrush );
 	}
 
 	if( tr->fraction == 1 ) {

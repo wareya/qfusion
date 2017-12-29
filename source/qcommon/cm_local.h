@@ -18,6 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#define CM_USE_SIMD
+
 #define MAX_CM_LEAFS        ( MAX_MAP_LEAFS )
 
 #define CM_SUBDIV_LEVEL     ( 16 )
@@ -39,7 +41,7 @@ typedef struct {
 	int children[2];            // negative numbers are leafs
 } cnode_t;
 
-#ifdef QF_SSE4
+#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
 typedef struct {
 	vec4_t normal;
 	float dist;
@@ -55,8 +57,6 @@ typedef struct {
 	int surfFlags;
 } cbrushside_t;
 
-#define CM_USE_SIMD
-
 #if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
 typedef vec4_t vec_bounds_t;
 #else
@@ -66,7 +66,8 @@ typedef vec3_t vec_bounds_t;
 typedef struct {
 	cbrushside_t *brushsides;
 
-	vec_bounds_t mins, maxs;
+	vec_bounds_t mins, maxs, center;
+	float radius;
 
 	int contents;
 	int checkcount;             // to avoid repeated testings
@@ -76,7 +77,8 @@ typedef struct {
 typedef struct {
 	cbrush_t *facets;
 
-	vec_bounds_t mins, maxs;
+	vec_bounds_t mins, maxs, center;
+	float radius;
 
 	int contents;
 	int checkcount;             // to avoid repeated testings
@@ -224,13 +226,6 @@ void    CM_BoundBrush( cmodel_state_t *cms, cbrush_t *brush );
 void    CM_FloodAreaConnections( cmodel_state_t *cms );
 
 uint8_t *CM_DecompressVis( const uint8_t *in, int rowsize, uint8_t *decompressed );
-
-inline void CM_SetUnusedBoundsComponents( vec_bounds_t mins, vec_bounds_t maxs ) {
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
-	mins[3] = 0;
-	maxs[3] = 1;
-#endif
-}
 
 static inline void CM_CopyRawToCMPlane( const cplane_t *src, cm_plane_t *dest ) {
 	VectorCopy( src->normal, dest->normal );
