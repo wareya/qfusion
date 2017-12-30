@@ -25,6 +25,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_FACET_PLANES 32
 
+inline float CM_AddSphericalBounds( vec_bounds_t mins, vec_bounds_t maxs, vec_bounds_t center ) {
+#ifdef CM_USE_SSE
+	mins[3] = 0.0f;
+	maxs[3] = 1.0f;
+	center[3] = 0.0f;
+#endif
+
+	vec3_t dimensions;
+	VectorSubtract( maxs, mins, dimensions );
+	VectorMA( mins, 0.5f, dimensions, center );
+
+	float squareDiameter = VectorLengthSquared( dimensions );
+	if( squareDiameter < 1.0f ) {
+		return 8.0f;
+	}
+
+	return 0.5f * sqrtf( squareDiameter ) + 8.0f;
+}
+
 /*
 * CM_CreateFacetFromPoints
 */
@@ -182,6 +201,8 @@ static int CM_CreateFacetFromPoints( cmodel_state_t *cms, cbrush_t *facet, vec3_
 		facet->maxs[i] += 1.0f;
 	}
 
+	facet->radius = CM_AddSphericalBounds( facet->mins, facet->maxs, facet->center );
+
 	return ( facet->numsides = numbrushplanes );
 }
 
@@ -281,10 +302,9 @@ static void CM_CreatePatch( cmodel_state_t *cms, cface_t *patch, cshaderref_t *s
 
 			for( j = 0, s = facet->brushsides; j < facet->numsides; j++, s++ ) {
 				planes[j] = brushplanes[k++];
-
-				s->plane = planes[j];
-				SnapPlane( s->plane.normal, &s->plane.dist );
-				CategorizePlane( &s->plane );
+				SnapPlane( planes[j].normal, &planes[j].dist );
+				CategorizePlane( &planes[j] );
+				CM_CopyRawToCMPlane( &planes[j], &s->plane );
 				s->surfFlags = shaderref->flags;
 			}
 		}
@@ -296,6 +316,8 @@ static void CM_CreatePatch( cmodel_state_t *cms, cface_t *patch, cshaderref_t *s
 			patch->mins[i] -= 1;
 			patch->maxs[i] += 1;
 		}
+
+		patch->radius = CM_AddSphericalBounds( patch->mins, patch->maxs, patch->center );
 	}
 
 	Mem_Free( points );
@@ -763,7 +785,7 @@ static void CMod_LoadBrushSides( cmodel_state_t *cms, lump_t *l ) {
 	cms->numbrushsides = count;
 
 	for( i = 0; i < count; i++, in++, out++ ) {
-		out->plane = cms->map_planes[LittleLong( in->planenum )];
+		CM_CopyRawToCMPlane( cms->map_planes + LittleLong( in->planenum ), &out->plane );
 		j = LittleLong( in->shadernum );
 		if( j >= cms->numshaderrefs ) {
 			Com_Error( ERR_DROP, "Bad brushside texinfo" );
@@ -794,7 +816,7 @@ static void CMod_LoadBrushSides_RBSP( cmodel_state_t *cms, lump_t *l ) {
 	cms->numbrushsides = count;
 
 	for( i = 0; i < count; i++, in++, out++ ) {
-		out->plane = cms->map_planes[LittleLong( in->planenum )];
+		CM_CopyRawToCMPlane( cms->map_planes + LittleLong( in->planenum ), &out->plane );
 		j = LittleLong( in->shadernum );
 		if( j >= cms->numshaderrefs ) {
 			Com_Error( ERR_DROP, "Bad brushside texinfo" );
@@ -916,4 +938,6 @@ void CM_BoundBrush( cmodel_state_t *cms, cbrush_t *brush ) {
 		brush->mins[i] = -brush->brushsides[i * 2 + 0].plane.dist;
 		brush->maxs[i] = +brush->brushsides[i * 2 + 1].plane.dist;
 	}
+
+	brush->radius = CM_AddSphericalBounds( brush->mins, brush->maxs, brush->center );
 }

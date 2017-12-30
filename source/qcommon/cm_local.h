@@ -18,6 +18,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#define CM_TRY_SIMD
+
+#if ( defined( CM_TRY_SIMD ) && defined( QF_SSE4 ) )
+#define CM_USE_SSE
+#endif
+
 #define MAX_CM_LEAFS        ( MAX_MAP_LEAFS )
 
 #define CM_SUBDIV_LEVEL     ( 16 )
@@ -39,15 +45,33 @@ typedef struct {
 	int children[2];            // negative numbers are leafs
 } cnode_t;
 
+#ifdef CM_USE_SSE
 typedef struct {
-	cplane_t plane;
+	vec4_t normal;
+	float dist;
+	short type;                 // for fast side tests
+	short signbits;             // signx + (signy<<1) + (signz<<1)
+} cm_plane_t;
+#else
+typedef cplane_t cm_plane_t;
+#endif
+
+typedef struct {
+	cm_plane_t plane;
 	int surfFlags;
 } cbrushside_t;
+
+#ifdef CM_USE_SSE
+typedef vec4_t vec_bounds_t;
+#else
+typedef vec3_t vec_bounds_t;
+#endif
 
 typedef struct {
 	cbrushside_t *brushsides;
 
-	vec3_t mins, maxs;
+	vec_bounds_t mins, maxs, center;
+	float radius;
 
 	int contents;
 	int checkcount;             // to avoid repeated testings
@@ -57,7 +81,8 @@ typedef struct {
 typedef struct {
 	cbrush_t *facets;
 
-	vec3_t mins, maxs;
+	vec_bounds_t mins, maxs, center;
+	float radius;
 
 	int contents;
 	int checkcount;             // to avoid repeated testings
@@ -175,13 +200,11 @@ struct cmodel_state_s {
 	uint8_t *cmod_base;
 
 	// cm_trace.c
-	cplane_t box_planes[6];
 	cbrushside_t box_brushsides[6];
 	cbrush_t box_brush[1];
 	cbrush_t *box_markbrushes[1];
 	cmodel_t box_cmodel[1];
 
-	cplane_t oct_planes[10];
 	cbrushside_t oct_brushsides[10];
 	cbrush_t oct_brush[1];
 	cbrush_t *oct_markbrushes[1];
@@ -207,3 +230,21 @@ void    CM_BoundBrush( cmodel_state_t *cms, cbrush_t *brush );
 void    CM_FloodAreaConnections( cmodel_state_t *cms );
 
 uint8_t *CM_DecompressVis( const uint8_t *in, int rowsize, uint8_t *decompressed );
+
+static inline void CM_CopyRawToCMPlane( const cplane_t *src, cm_plane_t *dest ) {
+	VectorCopy( src->normal, dest->normal );
+#ifdef CM_USE_SSE
+	dest->normal[3] = 0;
+#endif
+	dest->dist = src->dist;
+	dest->type = src->type;
+	dest->signbits = src->signbits;
+}
+
+static inline void CM_CopyCMToRawPlane( const cm_plane_t *src, cplane_t *dest ) {
+	VectorCopy( src->normal, dest->normal );
+	dest->dist = src->dist;
+	dest->type = src->type;
+	dest->signbits = src->signbits;
+}
+

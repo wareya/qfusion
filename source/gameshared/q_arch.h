@@ -361,6 +361,57 @@ typedef int socket_handle_t;
 #define HAVE__INTERLOCKED_API
 #endif
 
+#if ( defined __i386__ || defined __x86_64__ )
+#include <immintrin.h>
+
+// Unfortunately MSVC does not define __SSEn__ macros (but defines __AVXn__ !),
+// so we have to handle it at CMake level by adding these definitions manually
+
+#if defined( __AVX2__ )
+#define QF_AVX2
+#define QF_AVX
+#define QF_SSE4_1
+#define QF_SSE4_2
+#define QF_SSE4
+#define QF_SSE2
+#elif defined( __AVX__ )
+#define QF_AVX
+#define QF_SSE4_2
+#define QF_SSE4_1
+#define QF_SSE4
+#define QF_SSE2
+#elif defined( __SSE4_2__ )
+#define QF_SSE4_2
+#define QF_SSE4_1
+#define QF_SSE4
+#define QF_SSE2
+#elif defined( __SSE4_1__ )
+#define QF_SSE4_1
+#define QF_SSE4
+#define QF_SSE2
+#elif defined( __SSE2__ )
+#define QF_SSE2
+#endif
+
+// While QF_SIMD* macros should be defined via CMake for MSVC,
+// use these hacks to guarantee a minimal SIMD support if somebody forgets to do that.
+// Set detect guaranteed SSE2 support on x86-64 targets
+// for other compilers too (even if -msse2 is not specified).
+
+#ifndef QF_SSE2
+#ifdef _MSC_VER
+#if ( defined( _M_AMD64 ) || defined( _M_X64 ) )
+#define QF_SSE2
+#elif _M_IX86_FP == 2
+#define QF_SSE2
+#endif
+#elif __x86_64__  // Not MSVC and x86_64
+#define QF_SSE2
+#endif
+#endif  // QF_SSE2
+
+#endif  // x86 or x86_64
+
 //==============================================
 
 #if !defined( __cplusplus )
