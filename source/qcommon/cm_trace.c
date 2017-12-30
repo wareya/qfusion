@@ -468,7 +468,7 @@ typedef struct {
 	vec3_t traceDir;
 	float boxRadius;
 
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 	__m128 xmmAbsmins, xmmAbsmaxs;
 	// TODO: Add also xmm copies of trace dir/start once line distance test is vectorized
 	__m128 xmmClipBoxLookup[16];
@@ -501,7 +501,7 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	leadside = NULL;
 	side = brush->brushsides;
 
-#if !( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifndef CM_USE_SSE
 	// Do not even bother of making these local aliases for SSE code.
 	const float *startmins = tlc->startmins;
 	const float *startmaxs = tlc->startmaxs;
@@ -519,7 +519,7 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 			d1 = startmins[type] - dist;
 			d2 = endmins[type] - dist;
 		} else {
-#if !( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifndef CM_USE_SSE
 			// It has been proven that using a switch is cheaper than using a LUT like in SIMD approach
 			const float *normal = p->normal;
 			switch( p->signbits & 7 ) {
@@ -716,7 +716,7 @@ static void CM_TestBoxInBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	tlc->trace->contents = brush->contents;
 }
 
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 static inline bool CM_BoundsIntersect( __m128 traceAbsmins, __m128 traceAbsmaxs,
 									   const vec4_t shapeMins, const vec4_t shapeMaxs ) {
 	// This version relies on fast unaligned loads, that's why it requires SSE4.
@@ -737,7 +737,7 @@ static inline bool CM_BoundsIntersect( __m128 traceAbsmins, __m128 traceAbsmaxs,
 #endif
 
 static inline bool CM_MightCollide( const vec_bounds_t shapeMins, const vec_bounds_t shapeMaxs, const traceLocal_t *tlc ) {
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 	return CM_BoundsIntersect( tlc->xmmAbsmins, tlc->xmmAbsmaxs, shapeMins, shapeMaxs );
 #else
 	return BoundsIntersect( shapeMins, shapeMaxs, tlc->absmins, tlc->absmaxs );
@@ -972,7 +972,7 @@ loc0:
 //======================================================================
 
 static void CM_FillClipBoxLookup( traceLocal_t *tlc ) {
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 	// Note: Using setR is important here, otherwise components order is ... surprising
 	// (We're going to compute dot products with vectors loaded via _mm_loadu_ps that preserve array elements order)
 
@@ -1042,7 +1042,7 @@ static void CM_BoxTrace( cmodel_state_t *cms, trace_t *tr, vec3_t start, vec3_t 
 	AddPointToBounds( tlc.endmaxs, tlc.absmins, tlc.absmaxs );
 
 	// Always set xmm trace bounds since it is used by all code paths, leaf-optimized and generic
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 	tlc.xmmAbsmins = _mm_setr_ps( tlc.absmins[0], tlc.absmins[1], tlc.absmins[2], 0 );
 	tlc.xmmAbsmaxs = _mm_setr_ps( tlc.absmaxs[0], tlc.absmaxs[1], tlc.absmaxs[2], 1 );
 #endif

@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MAX_FACET_PLANES 32
 
 inline float CM_AddSphericalBounds( vec_bounds_t mins, vec_bounds_t maxs, vec_bounds_t center ) {
-#ifdef QF_SSE4
+#ifdef CM_USE_SSE
 	mins[3] = 0.0f;
 	maxs[3] = 1.0f;
 	center[3] = 0.0f;

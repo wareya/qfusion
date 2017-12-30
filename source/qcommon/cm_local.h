@@ -18,7 +18,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#define CM_USE_SIMD
+#define CM_TRY_SIMD
+
+#if ( defined( CM_TRY_SIMD ) && defined( QF_SSE4 ) )
+#define CM_USE_SSE
+#endif
 
 #define MAX_CM_LEAFS        ( MAX_MAP_LEAFS )
 
@@ -41,7 +45,7 @@ typedef struct {
 	int children[2];            // negative numbers are leafs
 } cnode_t;
 
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 typedef struct {
 	vec4_t normal;
 	float dist;
@@ -57,7 +61,7 @@ typedef struct {
 	int surfFlags;
 } cbrushside_t;
 
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 typedef vec4_t vec_bounds_t;
 #else
 typedef vec3_t vec_bounds_t;
@@ -229,7 +233,7 @@ uint8_t *CM_DecompressVis( const uint8_t *in, int rowsize, uint8_t *decompressed
 
 static inline void CM_CopyRawToCMPlane( const cplane_t *src, cm_plane_t *dest ) {
 	VectorCopy( src->normal, dest->normal );
-#if ( defined( CM_USE_SIMD ) && defined( QF_SSE4 ) )
+#ifdef CM_USE_SSE
 	dest->normal[3] = 0;
 #endif
 	dest->dist = src->dist;
