@@ -501,12 +501,12 @@ static void CM_ClipBoxToBrush( cmodel_state_t *cms, traceLocal_t *tlc, cbrush_t 
 	leadside = NULL;
 	side = brush->brushsides;
 
+	const float *startmins = tlc->startmins;
+	const float *endmins = tlc->endmins;
 #ifndef CM_USE_SSE
 	// Do not even bother of making these local aliases for SSE code.
-	const float *startmins = tlc->startmins;
-	const float *startmaxs = tlc->startmaxs;
-	const float *endmins = tlc->endmins;
 	const float *endmaxs = tlc->endmaxs;
+	const float *startmaxs = tlc->startmaxs;
 #endif
 
 	for( int i = 0, end = brush->numsides; i < end; i++, side++ ) {
