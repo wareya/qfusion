@@ -2292,7 +2292,7 @@ static inline const vec_t *RB_TriangleLinesColor( void ) {
 	}
 
 	if( rb.currentModelType == mod_brush ) {
-		return colorWhite;
+		return colorBlack;
 	}
 	if( rb.currentModelType != mod_bad ) {
 		return colorRed;
