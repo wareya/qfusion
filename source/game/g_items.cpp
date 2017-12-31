@@ -878,6 +878,9 @@ static void Finish_SpawningItem( edict_t *ent ) {
 			VectorCopy( tr.endpos, ent->s.origin );
 		}
 
+		// Add some extra Z to the trace start point.
+		// This change is required due to subtle collision behavior difference revealed after CM optimization.
+		ent->s.origin[2] += 16.0f;
 		VectorSet( dest, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] - 4096 );
 		G_Trace( &tr, ent->s.origin, ent->r.mins, ent->r.maxs, dest, ent, MASK_SOLID );
 		VectorCopy( tr.endpos, ent->s.origin );
