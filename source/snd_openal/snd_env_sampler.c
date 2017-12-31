@@ -546,6 +546,7 @@ static void ENV_ComputeReverberation( src_t *src ) {
 
 	float averageDistance = 0.0f;
 	unsigned numRaysHitSky = 0;
+	unsigned numRaysHitMetal = 0;
 	unsigned numReflectionPoints = 0;
 	unsigned numPrimaryRays = updateState->reverbPrimaryRaysSamplingProps.numSamples;
 	int valueIndex = updateState->reverbPrimaryRaysSamplingProps.valueIndex;
@@ -564,12 +565,17 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		}
 
 		// Skip surfaces non-reflective for sounds
-		if( trace.surfFlags & ( SURF_SKY | SURF_NOIMPACT | SURF_NOMARKS | SURF_FLESH | SURF_NOSTEPS ) ) {
+		int surfFlags = trace.surfFlags;
+		if( surfFlags & ( SURF_SKY | SURF_NOIMPACT | SURF_NOMARKS | SURF_FLESH | SURF_NOSTEPS ) ) {
 			// Go even further for sky. Simulate an "absorption" of sound by the void.
-			if( trace.surfFlags & SURF_SKY ) {
+			if( surfFlags & SURF_SKY ) {
 				numRaysHitSky++;
 			}
 			continue;
+		}
+
+		if( surfFlags & SURF_METALSTEPS ) {
+			numRaysHitMetal++;
 		}
 
 		if( DistanceSquared( src->origin, trace.endpos ) < 2 * 2 ) {
@@ -607,23 +613,14 @@ static void ENV_ComputeReverberation( src_t *src ) {
 	reverbProps->gain *= 0.75f + 0.5f * effectsScale;
 
 	// Simulate sound absorption by the void by lowering this value compared to its default one
-	reverbProps->lateReverbGain = 1.26f - 0.16f * sqrtf( numRaysHitSky / (float)numPrimaryRays );
+	float skyFactor = numRaysHitSky / (float)numPrimaryRays;
+	skyFactor = sqrtf( skyFactor );
+	reverbProps->lateReverbGain = 1.26f - 0.08f * skyFactor;
 
 	if( numReflectionPoints ) {
 		averageDistance /= (float)numReflectionPoints;
 		const float averageDistanceFactor = averageDistance / REVERB_ENV_DISTANCE_THRESHOLD;
 		assert( averageDistanceFactor >= 0.0f && averageDistanceFactor <= 1.0f );
-
-		// This value is just an optimized intermediate result, does not have much sense being taken alone.
-		const float smallRoomFactor = sqrtf( 1.0f - averageDistanceFactor );
-
-		// Lower the density is the more metallic and distinct the reverberation is.
-		// Let enclosed and small environments have lower density.
-		reverbProps->density = 1.0f - 0.3f * ( averageHitFactor * smallRoomFactor );
-		// Boost the reflections gain for small rooms.
-		reverbProps->reflectionsGain = 0.05f + 0.3f * smallRoomFactor;
-		// Lower late reverb gain for large rooms/environments
-		reverbProps->lateReverbGain *= 1.0f - 0.15f * averageDistanceFactor;
 
 		// Compute the standard deviation of hit distances to cut off high outliers
 		float hitDistanceStdDev = 0.0f;
@@ -659,17 +656,26 @@ static void ENV_ComputeReverberation( src_t *src ) {
 		}
 
 		assert( roomSizeFactor >= 0.0f && roomSizeFactor <= 1.0f );
+		// Set appropriate density based on room size and number of metallic surfaces in the environment
+		float metalFactor = numRaysHitMetal / (float)numPrimaryRays;
+		metalFactor = sqrtf( metalFactor );
+		reverbProps->density = 1.0f - ( 0.6f + 0.4f * effectsScale ) * ( ( 1.0f - roomSizeFactor ) * metalFactor );
 		// Lowering the diffusion adds more "coloration" to the reverb.
 		// Lower the diffusion for larger enclosed environments.
 		reverbProps->diffusion = 1.0f - roomSizeFactor * averageHitFactor;
 		assert( reverbProps->diffusion >= 0.0f && reverbProps->diffusion <= 1.0f );
 		// Greater effectsScale lowers diffusion value so there is more "coloration" in the reverb.
 		reverbProps->diffusion = powf( reverbProps->diffusion, 0.25f + 1.5f * effectsScale );
+		// Modulate late reverb gain by room size (it has been already affected by sky absorption)
+		// Open environments get lesser late reverb gain
+		reverbProps->lateReverbGain *= 1.0f - 0.1f * roomSizeFactor;
 		reverbProps->lateReverbDelay = 0.001f + 0.05f * roomSizeFactor;
 		// Can be 1.5x time units longer
 		reverbProps->decayTime = 0.70f + 1.50f * ( 0.5f + effectsScale ) * roomSizeFactor;
 		// Lower gain for huge environments. Otherwise it sounds way too artificial.
 		reverbProps->gain *= 1.0f - 0.1f * roomSizeFactor;
+		// Set higher reflections gain for narrow environments
+		reverbProps->reflectionsGain = 0.05f + ( 0.25f + 0.5f * effectsScale ) * ( 1.0f - roomSizeFactor );
 		// Obviously the reflections delay should be higher for large rooms.
 		reverbProps->reflectionsDelay = 0.005f + ( 0.2f + 0.05f * effectsScale ) * roomSizeFactor;
 	} else {
