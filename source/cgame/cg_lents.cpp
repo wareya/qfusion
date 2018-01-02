@@ -643,9 +643,8 @@ void CG_RocketExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, 
 */
 void CG_WaveExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, float radius ) {
 	lentity_t *le;
-	vec3_t angles, vec;
+	vec3_t angles;
 	vec3_t origin;
-	float expvelocity = 8.0f;
 
 	VecToAngles( dir, angles );
 
@@ -656,14 +655,11 @@ void CG_WaveExplosionMode( const vec3_t pos, const vec3_t dir, int fire_mode, fl
 	}
 
 	VectorMA( pos, radius * 0.12f, dir, origin );
-	le = CG_AllocSprite( LE_INVERSESCALE_ALPHA_FADE, origin, radius * 0.5f, 3,
-						 1, 1, 1, 1,
-						 radius * 3, 1.0f, 1.0f, 1.0, // white dlight
-						 CG_MediaShader( cgs.media.shaderWaveExplosion ) );
+	le = CG_AllocModel( LE_INVERSESCALE_ALPHA_FADE, origin, vec3_origin, 3,
+						1, 1, 1, 1,
+						450.0f, 0.9f, 0.9f, 1.0f,
+						CG_MediaModel( cgs.media.modWaveExplosion ), NULL );
 
-	VectorSet( vec, crandom() * expvelocity, crandom() * expvelocity, crandom() * expvelocity );
-	VectorScale( dir, expvelocity, le->velocity );
-	VectorAdd( le->velocity, vec, le->velocity );
 	le->ent.rotation = rand() % 360;
 
 	VectorMA( pos, radius * 0.20f, dir, origin );
@@ -916,7 +912,7 @@ void CG_WaveCoronaAndTrail( centity_t *cent, const vec3_t org ) {
 
 	if( cent->localEffects[LOCALEFFECT_WAVESPARK_LAST_DROP] + 8 < cg.time ) {
 		cent->localEffects[LOCALEFFECT_WAVESPARK_LAST_DROP] = cg.time;
-		for( int i = 0; i < 4; ++i ) {
+		for( int i = 0; i < 2; ++i ) {
 			CG_WaveSpark( org );
 		}
 	}

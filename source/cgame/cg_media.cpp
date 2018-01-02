@@ -234,6 +234,7 @@ void CG_RegisterMediaModels( void ) {
 	//	cgs.media.modGrenadeExplosion = CG_RegisterMediaModel( PATH_GRENADE_EXPLOSION_MODEL, true );
 	cgs.media.modRocketExplosion = CG_RegisterMediaModel( PATH_ROCKET_EXPLOSION_MODEL, true );
 	cgs.media.modPlasmaExplosion = CG_RegisterMediaModel( PATH_PLASMA_EXPLOSION_MODEL, true );
+	cgs.media.modWaveExplosion = CG_RegisterMediaModel( PATH_SHOCKWAVE_EXPLOSION_MODEL, true );
 
 	//	cgs.media.modBoltExplosion = CG_RegisterMediaModel( "models/weapon_hits/electrobolt/hit_electrobolt.md3", true );
 	//	cgs.media.modInstaExplosion = CG_RegisterMediaModel( "models/weapon_hits/instagun/hit_instagun.md3", true );
@@ -355,7 +356,6 @@ void CG_RegisterMediaShaders( void ) {
 	cgs.media.shaderLaserGunBeam = CG_RegisterMediaShader( "gfx/misc/laserbeam", true );
 	cgs.media.shaderRocketExplosion = CG_RegisterMediaShader( PATH_ROCKET_EXPLOSION_SPRITE, true );
 	cgs.media.shaderRocketExplosionRing = CG_RegisterMediaShader( PATH_ROCKET_EXPLOSION_RING_SPRITE, true );
-	cgs.media.shaderWaveExplosion = CG_RegisterMediaShader( PATH_WAVE_EXPLOSION_SPRITE, true );
 	cgs.media.shaderWaveExplosionRing = CG_RegisterMediaShader( PATH_WAVE_EXPLOSION_RING_SPRITE, true );
 
 	cgs.media.shaderLaser = CG_RegisterMediaShader( "gfx/misc/laser", false );

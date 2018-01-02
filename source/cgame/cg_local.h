@@ -225,6 +225,7 @@ typedef struct {
 	//wsw weapon sfx
 	cgs_media_handle_t *modRocketExplosion;
 	cgs_media_handle_t *modPlasmaExplosion;
+	cgs_media_handle_t *modWaveExplosion;
 
 	cgs_media_handle_t *modBulletExplode;
 	cgs_media_handle_t *modBladeWallHit;
@@ -240,7 +241,6 @@ typedef struct {
 	cgs_media_handle_t *shaderParticle;
 	cgs_media_handle_t *shaderGrenadeExplosion;
 	cgs_media_handle_t *shaderRocketExplosion;
-	cgs_media_handle_t *shaderWaveExplosion;
 	cgs_media_handle_t *shaderRocketExplosionRing;
 	cgs_media_handle_t *shaderWaveExplosionRing;
 	cgs_media_handle_t *shaderBulletExplosion;

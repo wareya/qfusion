@@ -227,6 +227,7 @@ extern "C" {
 #define PATH_GRENADE_EXPLOSION_MODEL        "models/weapon_hits/glauncher/hit_glauncher.md3"
 #define PATH_PLASMA_EXPLOSION_MODEL     "models/weapon_hits/plasmagun/hit_plasmagun.md3"
 #define PATH_ROCKET_EXPLOSION_MODEL     "models/weapon_hits/rlauncher/hit_rlauncher.md3"
+#define PATH_SHOCKWAVE_EXPLOSION_MODEL "models/weapon_hits/shockwave/hit_waveexp.md3"
 #define PATH_GUNBLADEBLAST_IMPACT_MODEL     "models/weapon_hits/gunblade/hit_blast.md3"
 #define PATH_GUNBLADEBLAST_EXPLOSION_MODEL  "models/weapon_hits/gunblade/hit_blastexp.md3"
 #define PATH_ELECTROBLAST_IMPACT_MODEL      "models/weapon_hits/electrobolt/hit_electrobolt.md3"
