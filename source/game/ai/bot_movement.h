@@ -1115,6 +1115,9 @@ public:
 		return results[1];
 	}
 
+	inline const AiAasRouteCache *RouteCache() const;
+	inline const ArrayRange<int> TravelFlags() const;
+
 	inline BotMovementPredictionContext( edict_t *self_ )
 		: self( self_ ),
 		sameFloorClusterAreasCache( self_ ),
@@ -1409,7 +1412,6 @@ class BotDummyMovementAction : public BotBaseMovementAction
 	BotMovementFallback *TryFindAasBasedFallback( BotMovementPredictionContext *context );
 	BotMovementFallback *TryFindStairsFallback( BotMovementPredictionContext *context );
 	bool TrySetupRampMovement( BotMovementPredictionContext *context, int rampAreaNum );
-	const int *TryFindBestRampExitArea( BotMovementPredictionContext *context, int rampAreaNum, int forbiddenAreaNum = 0 );
 	BotMovementFallback *TryFindRampFallback( BotMovementPredictionContext *context, int rampAreaNum, int forbiddenAreaNum = 0 );
 	BotMovementFallback *TryFindNearbyRampAreasFallback( BotMovementPredictionContext *context );
 	BotMovementFallback *TryFindWalkableTriggerFallback( BotMovementPredictionContext *context );
