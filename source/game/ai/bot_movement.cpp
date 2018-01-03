@@ -5117,6 +5117,7 @@ AreaAndScore *BotBunnyStraighteningReachChainMovementAction::SelectCandidateArea
 	const auto *aasReachabilities = aasWorld->Reachabilities();
 	const auto *aasAreas = aasWorld->Areas();
 	const auto *aasAreaSettings = aasWorld->AreaSettings();
+	const auto *aasAreaFloorClusterNums = aasWorld->AreaFloorClusterNums();
 	const auto *aasAreaStairsClusterNums = aasWorld->AreaStairsClusterNums();
 	const int navTargetAasAreaNum = context->NavTargetAasAreaNum();
 
@@ -5127,6 +5128,12 @@ AreaAndScore *BotBunnyStraighteningReachChainMovementAction::SelectCandidateArea
 	}
 
 	int metStairsClusterNum = 0;
+
+	int currAreaNum = context->CurrAasAreaNum();
+	int floorClusterNum = 0;
+	if( int groundedAreaNum = context->CurrGroundedAasAreaNum() ) {
+		floorClusterNum = aasAreaFloorClusterNums[groundedAreaNum];
+	}
 
 	// Do not make it speed-depended, it leads to looping/jitter!
 	const float distanceThreshold = 256.0f + 512.0f * self->ai->botRef->Skill();
@@ -5225,11 +5232,18 @@ AreaAndScore *BotBunnyStraighteningReachChainMovementAction::SelectCandidateArea
 		}
 
 		// Make sure the bot can see the ground
-		SolidAndLiquidWorldTrace( &trace, traceStartPoint.Data(), areaPoint.Data() );
-		if( trace.fraction != 1.0f ) {
-			// Restore minScore (it might have been set to the value of the rejected area score on this loop step)
-			minScore = prevMinScore;
-			continue;
+		// On failure, restore minScore (it might have been set to the value of the rejected area score on this loop step)
+		if( floorClusterNum && floorClusterNum == aasAreaFloorClusterNums[areaNum] ) {
+			if( !IsAreaWalkableInFloorCluster( currAreaNum, areaNum ) ) {
+				minScore = prevMinScore;
+				continue;
+			}
+		} else {
+			SolidAndLiquidWorldTrace( &trace, traceStartPoint.Data(), areaPoint.Data() );
+			if( trace.fraction != 1.0f ) {
+				minScore = prevMinScore;
+				continue;
+			}
 		}
 
 		new ( candidatesPtr++ )AreaAndScore( areaNum, score );
@@ -5433,6 +5447,8 @@ AreaAndScore *BotBunnyToBestShortcutAreaMovementAction::SelectCandidateAreas( Bo
 			continue;
 		}
 
+		// Q: Why an optimization that tests walkability in a floor cluster is not applied?
+		// A: Gaps are allowed between the current and target areas, but the walkability test rejects these kinds of areas
 		SolidWorldTrace( &trace, traceStartPoint.Data(), areaPoint.Data() );
 		if( trace.fraction != 1.0f ) {
 			// Restore minTravelTimeSave (it might has been set to the value of the rejected area on this loop step)
