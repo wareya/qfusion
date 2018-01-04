@@ -1967,7 +1967,7 @@ static void G_CallVotes_CheckState( void ) {
 		}
 
 		if( callvoteState.vote.callvote->need_auth && sv_mm_enable->integer ) {
-			if( client->mm_session <= 0 ) {
+			if( !Uuid_IsValidAuthSessionId( client->mm_session ) ) {
 				continue;
 			}
 		}
@@ -2032,9 +2032,11 @@ void G_CallVotes_CmdVote( edict_t *ent ) {
 		return;
 	}
 
-	if( callvoteState.vote.callvote->need_auth && sv_mm_enable->integer && ent->r.client->mm_session <= 0 ) {
-		G_PrintMsg( ent, "%sThe ongoing vote requires authentication\n", S_COLOR_RED );
-		return;
+	if( callvoteState.vote.callvote->need_auth && sv_mm_enable->integer ) {
+		if( !Uuid_IsValidAuthSessionId( ent->r.client->mm_session ) ) {
+			G_PrintMsg( ent, "%sThe ongoing vote requires authentication\n", S_COLOR_RED );
+			return;
+		}
 	}
 
 	vote = trap_Cmd_Argv( 1 );
@@ -2192,9 +2194,11 @@ static void G_CallVote( edict_t *ent, bool isopcall ) {
 		return;
 	}
 
-	if( !isopcall && callvote->need_auth && sv_mm_enable->integer && ent->r.client->mm_session <= 0 ) {
-		G_PrintMsg( ent, "%sCallvote %s requires authentication\n", S_COLOR_RED, callvote->name );
-		return;
+	if( !isopcall && callvote->need_auth && sv_mm_enable->integer ) {
+		if( !Uuid_IsValidAuthSessionId( ent->r.client->mm_session ) ) {
+			G_PrintMsg( ent, "%sCallvote %s requires authentication\n", S_COLOR_RED, callvote->name );
+			return;
+		}
 	}
 
 	if( !isopcall && ent->r.client->level.callvote_when &&

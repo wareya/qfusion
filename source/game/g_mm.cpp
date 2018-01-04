@@ -29,7 +29,7 @@ static void G_Match_RaceReport( void );
 
 //====================================================
 
-static clientRating_t *g_ratingAlloc( const char *gametype, float rating, float deviation, int uuid ) {
+static clientRating_t *g_ratingAlloc( const char *gametype, float rating, float deviation, mm_uuid_t uuid ) {
 	clientRating_t *cr;
 
 	cr = (clientRating_t*)G_Malloc( sizeof( *cr ) );
@@ -101,7 +101,7 @@ void G_TransferRatings( void ) {
 		}
 
 		// temphack for duplicate client entries
-		found = Rating_FindId( game.ratings, client->mm_session );
+		found = Rating_FindId( game.ratings, &client->mm_session );
 		if( found ) {
 			continue;
 		}
@@ -159,7 +159,7 @@ clientRating_t *G_AddDefaultRating( edict_t *ent, const char *gametype ) {
 		clientRating_t *found;
 
 		// add this rating to current game-ratings
-		found = Rating_FindId( game.ratings, client->mm_session );
+		found = Rating_FindId( game.ratings, &client->mm_session );
 		if( !found ) {
 			found = g_ratingCopy( cr );
 			if( found ) {
@@ -209,7 +209,7 @@ clientRating_t *G_AddRating( edict_t *ent, const char *gametype, float rating, f
 		clientRating_t *found;
 
 		// add this rating to current game-ratings
-		found = Rating_FindId( game.ratings, client->mm_session );
+		found = Rating_FindId( game.ratings, &client->mm_session );
 		if( !found ) {
 			found = g_ratingCopy( cr );
 			if( found ) {
@@ -236,7 +236,7 @@ void G_RemoveRating( edict_t *ent ) {
 	client = ent->r.client;
 
 	// first from the game
-	cr = Rating_DetachId( &game.ratings, client->mm_session );
+	cr = Rating_DetachId( &game.ratings, &client->mm_session );
 	if( cr ) {
 		G_Free( cr );
 	}
@@ -253,10 +253,12 @@ void G_ListRatings_f( void ) {
 	clientRating_t *cr;
 	gclient_t *cl;
 	edict_t *ent;
+	char uuid_buffer[UUID_BUFFER_SIZE];
 
 	Com_Printf( "Listing ratings by gametype:\n" );
-	for( cr = game.ratings; cr ; cr = cr->next )
-		Com_Printf( "  %s %d %f %f\n", cr->gametype, cr->uuid, cr->rating, cr->deviation );
+	for( cr = game.ratings; cr ; cr = cr->next ) {
+		Com_Printf( "  %s %s %f %f\n", cr->gametype, Uuid_ToString( uuid_buffer, cr->uuid ), cr->rating, cr->deviation );
+	}
 
 	Com_Printf( "Listing ratings by player\n" );
 	for( ent = game.edicts + 1; PLAYERNUM( ent ) < gs.maxclients; ent++ ) {
@@ -267,8 +269,9 @@ void G_ListRatings_f( void ) {
 		}
 
 		Com_Printf( "%s:\n", cl->netname );
-		for( cr = cl->ratings; cr ; cr = cr->next )
-			Com_Printf( "  %s %d %f %f\n", cr->gametype, cr->uuid, cr->rating, cr->deviation );
+		for( cr = cl->ratings; cr ; cr = cr->next ) {
+			Com_Printf( "  %s %s %f %f\n", cr->gametype, Uuid_ToString( uuid_buffer, cr->uuid ), cr->rating, cr->deviation );
+		}
 	}
 }
 
@@ -346,6 +349,11 @@ raceRun_t *G_NewRaceRun( edict_t *ent, int numSectors ) {
 	rr->times = ( int64_t * )G_LevelMalloc( ( numSectors + 1 ) * sizeof( *rr->times ) );
 	rr->numSectors = numSectors;
 	rr->owner = cl->mm_session;
+	if( Uuid_IsValidAuthSessionId( cl->mm_session ) ) {
+		rr->nickname[0] = '\0';
+	} else {
+		Q_strncpyz( rr->nickname, cl->netname, MAX_NAME_BYTES );
+	}
 
 	return rr;
 }
@@ -382,10 +390,8 @@ void G_SetRaceTime( edict_t *ent, int sector, int64_t time ) {
 			return;
 		}
 
-		if( cl->mm_session <= 0 ) {
-			G_Printf( "G_SetRaceTime: not reporting non-registered clients\n" );
-			return;
-		}
+		// Note: the test whether client session id has been removed,
+		// race runs are reported for non-authenticated players too
 
 		if( !game.raceruns ) {
 			game.raceruns = LinearAllocator( sizeof( raceRun_t ), 0, _G_LevelMalloc, _G_LevelFree );
@@ -399,7 +405,13 @@ void G_SetRaceTime( edict_t *ent, int sector, int64_t time ) {
 		rr->times = 0;
 
 		// see if we have to push intermediate result
+		// TODO: We can live with eventual consistency of race records, but it should be kept in mind
+		// TODO: Send new race runs every N seconds, or if its likely to be a new record
 		if( LA_Size( game.raceruns ) >= RACERUN_BATCH_SIZE ) {
+			// Update an actual nickname that is going to be used to identify a run for a non-authenticated player
+			if( !Uuid_IsValidAuthSessionId( cl->mm_session ) ) {
+				Q_strncpyz( rr->nickname, cl->netname, MAX_NAME_BYTES );
+			}
 			G_Match_SendReport();
 
 			// double-check this for memory-leaks
@@ -409,11 +421,17 @@ void G_SetRaceTime( edict_t *ent, int sector, int64_t time ) {
 			game.raceruns = 0;
 		}
 	}
+
+	// Update an actual nickname that is going to be used to identify a run for a non-authenticated player
+	if( !Uuid_IsValidAuthSessionId( cl->mm_session ) ) {
+		Q_strncpyz( rr->nickname, cl->netname, MAX_NAME_BYTES );
+	}
 }
 
 void G_ListRaces_f( void ) {
 	int i, j, size;
 	raceRun_t *run;
+	char uuid_buffer[UUID_BUFFER_SIZE];
 
 	if( !game.raceruns || !LA_Size( game.raceruns ) ) {
 		G_Printf( "No races to report\n" );
@@ -424,7 +442,12 @@ void G_ListRaces_f( void ) {
 	size = LA_Size( game.raceruns );
 	for( i = 0; i < size; i++ ) {
 		run = (raceRun_t*)LA_Pointer( game.raceruns, i );
-		G_Printf( S_COLOR_RED "  %d    " S_COLOR_YELLOW, run->owner );
+		if( Uuid_IsValidAuthSessionId( run->owner ) ) {
+			G_Printf( S_COLOR_RED "  %s    " S_COLOR_YELLOW, Uuid_ToString( uuid_buffer, run->owner ) );
+		} else {
+			// TODO: Is the nickname actually set at the time of this call?
+			G_Printf( S_COLOR_RED "  %s    " S_COLOR_YELLOW, run->nickname );
+		}
 		for( j = 0; j < run->numSectors; j++ )
 			G_Printf( "%" PRIi64 " ", run->times[j] );
 		G_Printf( S_COLOR_GREEN "%" PRIi64 "\n", run->times[run->numSectors] );    // SAFE!
@@ -449,8 +472,9 @@ void G_ClearStatistics( void ) {
 void G_AddPlayerReport( edict_t *ent, bool final ) {
 	gclient_t *cl;
 	gclient_quit_t *quit;
-	int i, mm_session;
+	int i;
 	cvar_t *report_bots;
+	char uuid_buffer[UUID_BUFFER_SIZE];
 
 	// TODO: check if MM is enabled
 
@@ -481,26 +505,29 @@ void G_AddPlayerReport( edict_t *ent, bool final ) {
 		return;
 	}
 
-	mm_session = cl->mm_session;
-	if( mm_session == 0 ) {
-		G_Printf( "G_AddPlayerReport: Client without session-id (%s" S_COLOR_WHITE ") %d\n\t(%s)\n", cl->netname, mm_session, cl->userinfo );
+	mm_uuid_t mm_session = cl->mm_session;
+	if( Uuid_IsZeroUuid( mm_session ) ) {
+		const char *format = "G_AddPlayerReport: Client without session-id (%s" S_COLOR_WHITE ") %s\n\t(%s)\n";
+		G_Printf( format, cl->netname, Uuid_ToString( uuid_buffer, mm_session ), cl->userinfo );
 		return;
 	}
 
 	// check merge situation
 	for( quit = game.quits; quit; quit = quit->next ) {
-		if( quit->mm_session == mm_session ) {
+		if( Uuid_Compare( quit->mm_session, mm_session ) ) {
 			break;
 		}
 
 		// ch : for unregistered players, merge stats by name
-		if( mm_session < 0 && quit->mm_session < 0 && !strcmp( quit->netname, cl->netname ) ) {
-			break;
+		if( Uuid_IsAllBitsSetUuid( mm_session ) && Uuid_IsAllBitsSetUuid( quit->mm_session ) ) {
+			if( !strcmp( quit->netname, cl->netname ) ) {
+				break;
+			}
 		}
 	}
 
 	// debug :
-	G_Printf( "G_AddPlayerReport %s" S_COLOR_WHITE ", session %d\n", cl->netname, mm_session );
+	G_Printf( "G_AddPlayerReport %s" S_COLOR_WHITE ", session %s\n", cl->netname, Uuid_ToString( uuid_buffer, mm_session ) );
 
 	if( quit ) {
 		gameaward_t *award1, *award2;
@@ -646,6 +673,7 @@ static stat_query_t *G_Match_GenerateReport( void ) {
 	int i, teamGame, duelGame;
 	static const char *weapnames[WEAP_TOTAL] = { NULL };
 	score_stats_t *stats;
+	char uuid_buffer[UUID_BUFFER_SIZE];
 
 	// Feature: do not report matches with duration less than 1 minute (actually 66 seconds)
 	if( level.finalMatchDuration <= SIGNIFICANT_MATCH_DURATION ) {
@@ -707,7 +735,10 @@ static stat_query_t *G_Match_GenerateReport( void ) {
 	if( potm ) {
 		edict_t *ent;
 		for( ent = game.edicts + 1; PLAYERNUM( ent ) < gs.maxclients; ent++ ) {
-			if( ent->r.client->mm_session != potm->mm_session ) {
+			// TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			// TODO: Does it require local sessions to be distinct?
+			// TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			if( !Uuid_Compare( ent->r.client->mm_session, potm->mm_session ) ) {
 				continue;
 			}
 			if( ent->r.inuse ) {
@@ -860,13 +891,13 @@ static stat_query_t *G_Match_GenerateReport( void ) {
 				lfrag = (loggedFrag_t*)LA_Pointer( stats->fragAllocator, i );
 
 				sect = sq_api->CreateSection( query, fragSection, 0 );
-				sq_api->SetNumber( sect, "victim", lfrag->mm_victim );
+				sq_api->SetString( sect, "victim", Uuid_ToString( uuid_buffer, lfrag->victim ) );
 				sq_api->SetNumber( sect, "weapon", lfrag->weapon );
 				sq_api->SetNumber( sect, "time", lfrag->time );
 			}
 		}
 
-		sq_api->SetNumber( playersection, "sessionid", cl->mm_session );
+		sq_api->SetString( playersection, "session_id", Uuid_ToString( uuid_buffer, cl->mm_session ) );
 	}
 
 	return query;
@@ -934,6 +965,7 @@ static void G_Match_RaceReport( void ) {
 	stat_query_section_t *timesArray, *dummy;
 	raceRun_t *prr;
 	int i, j, size;
+	char uuid_buffer[UUID_BUFFER_SIZE];
 
 	if( !GS_RaceGametype() ) {
 		G_Printf( "G_Match_RaceReport.. not race gametype\n" );
@@ -972,7 +1004,13 @@ static void G_Match_RaceReport( void ) {
 
 		dummy = sq_api->CreateSection( query, runsArray, 0 );
 
-		sq_api->SetNumber( dummy, "session_id", prr->owner );
+		// Setting session id and nickname is mutually exclusive
+		if( Uuid_IsValidAuthSessionId( prr->owner ) ) {
+			sq_api->SetString( dummy, "session_id", Uuid_ToString( uuid_buffer, prr->owner ) );
+		} else {
+			sq_api->SetString( dummy, "nickname", prr->nickname );
+		}
+
 		sq_api->SetNumber( dummy, "timestamp", prr->timestamp );
 		timesArray = sq_api->CreateArray( query, dummy, "times" );
 
