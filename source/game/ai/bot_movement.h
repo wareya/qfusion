@@ -1411,6 +1411,7 @@ class BotDummyMovementAction : public BotBaseMovementAction
 	BotMovementFallback *TryFindStairsFallback( BotMovementPredictionContext *context );
 	bool TrySetupRampMovement( BotMovementPredictionContext *context, int rampAreaNum );
 	BotMovementFallback *TryFindRampFallback( BotMovementPredictionContext *context, int rampAreaNum, int forbiddenAreaNum = 0 );
+	BotMovementFallback *TryFindLostNavTargetFallback( BotMovementPredictionContext *context );
 	BotMovementFallback *TryFindNearbyRampAreasFallback( BotMovementPredictionContext *context );
 	BotMovementFallback *TryFindWalkableTriggerFallback( BotMovementPredictionContext *context );
 	BotMovementFallback *TryFindJumpFromLavaFallback( BotMovementPredictionContext *context );
