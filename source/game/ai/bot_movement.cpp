@@ -1882,8 +1882,8 @@ void BotDummyMovementAction::PlanPredictionStep( BotMovementPredictionContext *c
 	const auto &entityPhysicsState = context->movementState->entityPhysicsState;
 	if( entityPhysicsState.GroundEntity() && entityPhysicsState.GetGroundNormalZ() < 0.999f ) {
 		if( int groundedAreaNum = context->CurrGroundedAasAreaNum() ) {
-			if( AiAasWorld::Instance()->AreaSettings()[groundedAreaNum].areaflags & AREA_SLIDABLE_RAMP ) {
-				if( TrySetupRampMovement( context, groundedAreaNum ) ) {
+			if( AiAasWorld::Instance()->AreaSettings()[groundedAreaNum].areaflags & AREA_INCLINED_FLOOR ) {
+				if( TrySetupInclinedFloorMovement( context, groundedAreaNum ) ) {
 					handledSpecialMovement = true;
 				}
 			}
@@ -2994,9 +2994,9 @@ BotMovementFallback *BotDummyMovementAction::TryFindStairsFallback( BotMovementP
 	return fallback;
 }
 
-static const int *TryFindBestRampExitArea( BotMovementPredictionContext *context,
-										   int rampAreaNum,
-										   int forbiddenAreaNum = 0 ) {
+static const int *TryFindBestInclinedFloorExitArea( BotMovementPredictionContext *context,
+													int rampAreaNum,
+													int forbiddenAreaNum = 0 ) {
 	const auto *aasWorld = AiAasWorld::Instance();
 	const auto *aasAreas = aasWorld->Areas();
 	const auto *aasAreaSettings = aasWorld->AreaSettings();
@@ -3020,12 +3020,12 @@ static const int *TryFindBestRampExitArea( BotMovementPredictionContext *context
 			continue;
 		}
 		const int reachAreaNum = reach.areanum;
-		const auto &reachAreaFlags = aasAreaSettings[reachAreaNum].areaflags;
-		if( !( reachAreaFlags & AREA_GROUNDED ) ) {
+		if( reach.areanum == forbiddenAreaNum ) {
 			continue;
 		}
-		// The area should not have an inclined floor itself
-		if( reachAreaFlags & AREA_INCLINED_FLOOR ) {
+
+		const auto &reachAreaFlags = aasAreaSettings[reachAreaNum].areaflags;
+		if( !( reachAreaFlags & AREA_GROUNDED ) ) {
 			continue;
 		}
 
@@ -3046,7 +3046,9 @@ static const int *TryFindBestRampExitArea( BotMovementPredictionContext *context
 		return nullptr;
 	}
 
-	if( lowestAreaHeight >= highestAreaHeight ) {
+	// Note: The comparison operator has been changed from >= to >
+	// since adjacent ramp areas are likely to have the same bounding box height dimensions
+	if( lowestAreaHeight > highestAreaHeight ) {
 		return nullptr;
 	}
 
@@ -3064,9 +3066,6 @@ static const int *TryFindBestRampExitArea( BotMovementPredictionContext *context
 	const auto *routeCache = context->RouteCache();
 	const auto &travelFlags = context->TravelFlags();
 	for( int i = 0; i < 2; ++i ) {
-		if( fromAreaNums[i] == forbiddenAreaNum ) {
-			continue;
-		}
 		for( int flags: travelFlags ) {
 			int travelTime = routeCache->TravelTimeToGoalArea( fromAreaNums[i], toAreaNum, flags );
 			if( travelTime && travelTime < travelTimeToTarget && travelTime < bestTravelTime ) {
@@ -3084,10 +3083,10 @@ static const int *TryFindBestRampExitArea( BotMovementPredictionContext *context
 	return &aasReach[fromReachNums[bestIndex]].areanum;
 }
 
-bool BotDummyMovementAction::TrySetupRampMovement( BotMovementPredictionContext *context, int rampAreaNum ) {
+bool BotDummyMovementAction::TrySetupInclinedFloorMovement( BotMovementPredictionContext *context, int rampAreaNum ) {
 	const auto *aasWorld = AiAasWorld::Instance();
 	const auto *aasAreas = aasWorld->Areas();
-	const auto *bestAreaNum = TryFindBestRampExitArea( context, rampAreaNum );
+	const auto *bestAreaNum = TryFindBestInclinedFloorExitArea( context, rampAreaNum );
 	if( !bestAreaNum ) {
 		return false;
 	}
@@ -3114,7 +3113,7 @@ bool BotDummyMovementAction::TrySetupRampMovement( BotMovementPredictionContext 
 
 BotMovementFallback *BotDummyMovementAction::TryFindRampFallback( BotMovementPredictionContext *context,
 																  int rampAreaNum, int forbiddenAreaNum ) {
-	if( const int *bestExitAreaNum = TryFindBestRampExitArea( context, rampAreaNum, forbiddenAreaNum ) ) {
+	if( const int *bestExitAreaNum = TryFindBestInclinedFloorExitArea( context, rampAreaNum, forbiddenAreaNum ) ) {
 		auto *fallback = &self->ai->botRef->useRampExitMovementFallback;
 		fallback->Activate( rampAreaNum, *bestExitAreaNum );
 		return fallback;
@@ -3147,7 +3146,7 @@ BotMovementFallback *BotDummyMovementAction::TryFindNearbyRampAreasFallback( Bot
 		}
 
 		// Set the current grounded area num as a forbidden to avoid looping
-		if( const int *areaNum = TryFindBestRampExitArea( context, reachAreaNum, currGroundedAreaNum ) ) {
+		if( const int *areaNum = TryFindBestInclinedFloorExitArea( context, reachAreaNum, currGroundedAreaNum ) ) {
 			const auto &bestArea = aasWorld->Areas()[*areaNum];
 			Vec3 areaPoint( bestArea.center );
 			areaPoint.Z() = bestArea.mins[2] + 48;
@@ -4677,7 +4676,7 @@ bool ReachChainInterpolator::Exec( BotMovementPredictionContext *context ) {
 		currAreaFloorClusterNum = aasAreaFloorClusterNums[currGroundedAreaNum];
 		// Stairs clusters and inclined floor areas are mutually exclusive
 		if( aasAreaSettings[currGroundedAreaNum].areaflags & AREA_INCLINED_FLOOR ) {
-			if( const auto *exitAreaNum = TryFindBestRampExitArea( context, currGroundedAreaNum ) ) {
+			if( const auto *exitAreaNum = TryFindBestInclinedFloorExitArea( context, currGroundedAreaNum ) ) {
 				if( TrySetDirToRegionExitArea( context, aasAreas[*exitAreaNum] ) ) {
 					return true;
 				}
