@@ -3,6 +3,7 @@
 
 static vec3_t oldListenerOrigin;
 static vec3_t oldListenerVelocity;
+static int listenerLeafNum = -1;
 static bool wasListenerInLiquid;
 
 #define MAX_DIRECT_OBSTRUCTION_SAMPLES ( 8 )
@@ -56,9 +57,12 @@ void ENV_Init() {
 	wasListenerInLiquid = false;
 
 	ENV_InitRandomTables();
+
+	listenerLeafNum = -1;
 }
 
 void ENV_Shutdown() {
+	listenerLeafNum = -1;
 }
 
 void ENV_RegisterSource( src_t *src ) {
@@ -257,6 +261,14 @@ static void ENV_ProcessUpdatesPriorityQueue() {
 	int64_t millis = trap_Milliseconds();
 	src_t *src;
 	unsigned numUpdates = 0;
+
+	// Reset the listener leaf num for the new update session.
+	// This prevents reusing outdated leaf nums,
+	// especially after a map change when it might even lead to crash,
+	// and allows caching the leaf for this update session,
+	// since we know that a valid value of the leaf is always up-to-date.
+	// The leaf will be computed on demand if its necessary.
+	listenerLeafNum = -1;
 
 	// Always do at least a single update
 	for( ;; ) {
@@ -478,7 +490,12 @@ static void ENV_ComputeDirectObstruction( src_t *src ) {
 		return;
 	}
 
-	if( !trap_InPVS( testedListenerOrigin, src->origin ) ) {
+	// Compute the leaf num if needed
+	if( listenerLeafNum < 0 ) {
+		listenerLeafNum = trap_PointLeafNum( testedListenerOrigin );
+	}
+
+	if( !trap_LeafsInPVS( listenerLeafNum, trap_PointLeafNum( src->origin ) ) ) {
 		envProps->directObstruction = 1.0f;
 		return;
 	}
@@ -691,8 +708,18 @@ static void ENV_ComputeReverberation( src_t *src ) {
 
 	// Compute and set reverb obstruction
 
+	// Compute the leaf num if needed
+	if( listenerLeafNum < 0 ) {
+		listenerLeafNum = trap_PointLeafNum( testedListenerOrigin );
+	}
+
 	unsigned numPassedSecondaryRays = 0;
 	for( unsigned i = 0; i < numReflectionPoints; i++ ) {
+		// Cut off by PVS system early, we are not interested in actual ray hit points contrary to the primary emission.
+		if( !trap_LeafsInPVS( listenerLeafNum, trap_PointLeafNum( reflectionPoints[i] ) ) ) {
+			continue;
+		}
+
 		trap_Trace( &trace, reflectionPoints[i], testedListenerOrigin, vec3_origin, vec3_origin, MASK_SOLID );
 		if( trace.fraction == 1.0f && !trace.startsolid ) {
 			numPassedSecondaryRays++;

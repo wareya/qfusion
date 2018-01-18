@@ -193,11 +193,17 @@ static int CL_SoundModule_PointContents( vec3_t p ) {
 	return 0;
 }
 
-static bool CL_SoundModule_InPVS( vec3_t p1, vec3_t p2 ) {
+static int CL_SoundModule_PointLeafNum( const vec3_t p ) {
 	if( cl.sound_cms ) {
-		return CM_InPVS( cl.sound_cms, p1, p2 );
+		return CM_PointLeafnum( cl.sound_cms, p );
 	}
-	// Be consistent with the Trace() call.
+	return 0;
+}
+
+static bool CL_SoundModule_LeafsInPVS( int leafnum1, int leafnum2 ) {
+	if( cl.sound_cms ) {
+		return CM_LeafsInPVS( cl.sound_cms, leafnum1, leafnum2 );
+	}
 	return true;
 }
 
@@ -293,7 +299,8 @@ void CL_SoundModule_Init( bool verbose ) {
 
 	import.Trace = CL_SoundModule_Trace;
 	import.PointContents = CL_SoundModule_PointContents;
-	import.InPVS = CL_SoundModule_InPVS;
+	import.PointLeafNum = CL_SoundModule_PointLeafNum;
+	import.LeafsInPVS = CL_SoundModule_LeafsInPVS;
 
 	import.Thread_Create = QThread_Create;
 	import.Thread_Join = QThread_Join;

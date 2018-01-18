@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // snd_public.h -- sound dll information visible to engine
 
-#define SOUND_API_VERSION   40
+#define SOUND_API_VERSION   41
 
 #define ATTN_NONE 0
 
@@ -95,7 +95,9 @@ typedef struct {
 	// environment sampling
 	void ( *Trace )( struct trace_s *tr, vec3_t start, vec3_t end, vec3_t mins, vec3_t maxs, int mask );
 	int ( *PointContents )( vec3_t p );
-	bool ( *InPVS )( vec3_t p1, vec3_t p2 );
+	// these calls serve utility of PVS sampling forcing efficient usage patterns
+	int ( *PointLeafNum )( const vec3_t p );
+	bool ( *LeafsInPVS )( int leafnum1, int leafnum2 );
 
 	// multithreading
 	struct qthread_s *( *Thread_Create )( void *( *routine )( void* ), void *param );
